@@ -216,6 +216,30 @@
 
         .loading-gradient.visible {
             opacity: 1;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { 
+                transform: scale(1) rotate(0deg); 
+                filter: hue-rotate(0deg) blur(0px);
+            }
+            25% { 
+                transform: scale(1.1) rotate(5deg); 
+                filter: hue-rotate(15deg) blur(2px);
+            }
+            50% { 
+                transform: scale(0.95) rotate(-3deg); 
+                filter: hue-rotate(-10deg) blur(0px);
+            }
+            75% { 
+                transform: scale(1.08) rotate(2deg); 
+                filter: hue-rotate(10deg) blur(1px);
+            }
+            100% { 
+                transform: scale(1) rotate(0deg); 
+                filter: hue-rotate(0deg) blur(0px);
+            }
         }
 
         .loading-balls-container {
@@ -241,26 +265,29 @@
             width: 56px;
             height: 56px;
             object-fit: contain;
+            transition: transform 0.3s ease;
         }
 
         /* Position balls in a circle */
-        .loading-ball:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); } /* basketball - top */
-        .loading-ball:nth-child(2) { top: 20%; right: 0; } /* football - top right */
-        .loading-ball:nth-child(3) { bottom: 20%; right: 5%; } /* tennis - bottom right */
-        .loading-ball:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); } /* soccer - bottom */
-        .loading-ball:nth-child(5) { bottom: 20%; left: 5%; } /* golf - bottom left */
-        .loading-ball:nth-child(6) { top: 20%; left: 0; } /* baseball - top left */
+        .loading-ball:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .loading-ball:nth-child(2) { top: 20%; right: 0; }
+        .loading-ball:nth-child(3) { bottom: 20%; right: 5%; }
+        .loading-ball:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .loading-ball:nth-child(5) { bottom: 20%; left: 5%; }
+        .loading-ball:nth-child(6) { top: 20%; left: 0; }
 
         @keyframes rotateBalls {
-            0% { transform: rotate(0deg) scale(0.85); }
-            25% { transform: rotate(90deg) scale(1.1); }
-            50% { transform: rotate(180deg) scale(0.85); }
-            75% { transform: rotate(270deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(0.85); }
+            0% { transform: rotate(0deg) scale(0.8); }
+            15% { transform: rotate(54deg) scale(1.05); }
+            35% { transform: rotate(126deg) scale(1.15); }
+            50% { transform: rotate(180deg) scale(1.05); }
+            65% { transform: rotate(234deg) scale(1.15); }
+            85% { transform: rotate(306deg) scale(1.05); }
+            100% { transform: rotate(360deg) scale(0.8); }
         }
 
         .loading-balls-container.spinning {
-            animation: rotateBalls 3s ease-in-out infinite;
+            animation: rotateBalls 3.5s ease-in-out infinite;
         }
 
         .loading-quote-text {
@@ -427,6 +454,7 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+            animation: gradientShift 4s ease-in-out infinite;
         }
 
         .mini-loader-balls {
@@ -464,7 +492,9 @@
         #sport-screen {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg);
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             z-index: 101;
             transform: translateY(100%);
             transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
@@ -477,7 +507,7 @@
         .modal-header {
             display: flex;
             align-items: center;
-            padding: 16px 20px;
+            padding: 20px 24px;
             position: relative;
         }
 
@@ -486,7 +516,7 @@
             left: 50%;
             transform: translateX(-50%);
             font-family: 'Anton', sans-serif;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 400;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -495,46 +525,50 @@
         .sport-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            padding: 24px 20px;
+            gap: 12px;
+            padding: 20px 24px;
         }
 
         .sport-card {
-            background: var(--card-bg);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: none;
-            border-radius: 20px;
-            padding: 28px 20px;
+            border-radius: 24px;
+            padding: 24px 16px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             cursor: pointer;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
 
         .sport-card:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.9);
         }
 
         .sport-card:active {
-            transform: scale(0.98);
+            transform: scale(0.97);
         }
 
         .sport-card.selected {
-            box-shadow: 0 0 0 2px var(--green), var(--shadow-lg);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 0 2px var(--green), 0 4px 20px rgba(0,0,0,0.08);
         }
 
         .sport-icon {
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;
             object-fit: contain;
         }
 
         .sport-name {
             font-family: 'Instrument Serif', Georgia, serif;
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 400;
             color: var(--text);
         }
@@ -684,7 +718,7 @@
             border-bottom: 1px solid var(--border);
             cursor: pointer;
             font-size: 1rem;
-            transition: color 0.2s ease;
+            transition: color 0.2s ease, background 0.2s ease;
         }
 
         .location-item:hover {
@@ -693,6 +727,54 @@
 
         .location-item:last-child {
             border-bottom: none;
+        }
+
+        /* Autocomplete dropdown */
+        .autocomplete-dropdown {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            margin-top: 8px;
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .autocomplete-dropdown.visible {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        .autocomplete-item {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .autocomplete-item:active {
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .autocomplete-item svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--green);
+            flex-shrink: 0;
         }
 
         .confirm-location-btn {
@@ -1302,53 +1384,59 @@
                         const cityState = `${place['place name']}, ${place['state abbreviation']}`;
                         
                         // Show as suggestion
-                        showAutocompleteSuggestions([cityState]);
+                        showAutocompleteSuggestions([{ city: cityState, zip: query.trim() }]);
+                    } else {
+                        showAutocompleteSuggestions([]);
                     }
                 } else {
-                    // For city names, use a simple approach - show what they typed
-                    // In a production app, you'd use Google Places API here
                     showAutocompleteSuggestions([]);
                 }
             } catch (error) {
                 console.log('Location lookup error:', error);
+                showAutocompleteSuggestions([]);
             }
         }
         
         function showAutocompleteSuggestions(suggestions) {
-            // Clear current suggestions (keep recent)
-            const existingItems = el.locationSuggestions.querySelectorAll('.autocomplete-item');
-            existingItems.forEach(item => item.remove());
+            // Get or create dropdown
+            let dropdown = document.getElementById('autocomplete-dropdown');
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = 'autocomplete-dropdown';
+                dropdown.className = 'autocomplete-dropdown';
+                // Insert after search bar
+                const searchBar = document.querySelector('.search-bar');
+                searchBar.parentNode.insertBefore(dropdown, searchBar.nextSibling);
+            }
             
-            // Add autocomplete header if we have suggestions
-            let autocompleteHeader = document.getElementById('autocomplete-header');
+            // Clear and populate
+            dropdown.innerHTML = '';
+            
             if (suggestions.length > 0) {
-                if (!autocompleteHeader) {
-                    autocompleteHeader = document.createElement('div');
-                    autocompleteHeader.id = 'autocomplete-header';
-                    autocompleteHeader.className = 'recent-header';
-                    autocompleteHeader.textContent = 'Did you mean';
-                    autocompleteHeader.style.marginTop = '16px';
-                    el.locationSuggestions.parentNode.insertBefore(autocompleteHeader, el.locationSuggestions);
-                }
-                autocompleteHeader.style.display = 'block';
-                
                 suggestions.forEach(suggestion => {
-                    const li = document.createElement('li');
-                    li.className = 'location-item autocomplete-item';
-                    li.textContent = suggestion;
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.innerHTML = `
+                        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <span>${suggestion.city}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        el.locationInput.value = suggestion.city;
+                        el.confirmLocationBtn.disabled = false;
+                        el.clearLocationBtn.classList.add('visible');
+                        dropdown.classList.remove('visible');
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.classList.add('visible');
+            } else {
+                dropdown.classList.remove('visible');
+            }
+        }
                     li.addEventListener('click', () => {
                         el.locationInput.value = suggestion;
                         el.confirmLocationBtn.disabled = false;
                         showAutocompleteSuggestions([]); // Clear suggestions
-                    });
-                    // Insert at top of list
-                    el.locationSuggestions.insertBefore(li, el.locationSuggestions.firstChild);
-                });
-            } else if (autocompleteHeader) {
-                autocompleteHeader.style.display = 'none';
-            }
-        }
-
         el.locationInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && e.target.value) {
                 handleLocationSubmit(e.target.value);

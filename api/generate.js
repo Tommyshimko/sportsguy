@@ -38,9 +38,10 @@ export default async function handler(req, res) {
 
 RULES:
 1. Reference the LOCAL team for ${location} (e.g., NYC = Giants/Jets/Knicks/Yankees)
-2. Use web search to find what happened in the last few days
-3. Mention specific players, scores, or storylines
+2. Use web search to find what happened TODAY or LAST NIGHT - the most recent game or news possible
+3. Mention specific players, scores, or storylines from the LAST 24 HOURS
 4. Sound like a real fan - casual, opinionated
+5. If there was a game today/last night, reference the score and key moments
 
 FORMAT - CRITICAL:
 - Output ONLY the quote, nothing else
@@ -50,35 +51,60 @@ FORMAT - CRITICAL:
 - NO meta-commentary about searching
 - Just the bar talk quote itself`;
 
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        tools: [{
-          type: 'web_search_20250305',
-          name: 'web_search'
-        }],
-        tool_choice: { type: 'auto' },
-        messages: [{
-          role: 'user',
-          content: `Give me a quick ${sportLeague} take for ${location}. Search for recent news, then give me 2 sentences max.`
-        }],
-        system: systemPrompt
-      })
-    });
+  // Retry function with exponential backoff
+  async function callWithRetry(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.CLAUDE_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 300,
+            tools: [{
+              type: 'web_search_20250305',
+              name: 'web_search'
+            }],
+            tool_choice: { type: 'auto' },
+            messages: [{
+              role: 'user',
+              content: `What happened TODAY or LAST NIGHT in ${sportLeague} for ${location}'s team? Search for the most recent game scores and news from the last 24 hours. Give me a 2 sentence bar take.`
+            }],
+            system: systemPrompt
+          })
+        });
 
-    const data = await response.json();
+        const data = await response.json();
+
+        // Check for rate limit error
+        if (data.error && data.error.type === 'rate_limit_error') {
+          console.log(`Rate limited, attempt ${attempt}/${maxRetries}`);
+          if (attempt < maxRetries) {
+            // Wait before retry: 2s, 4s, 8s
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+            continue;
+          }
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) throw error;
+        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+
+  try {
+    const data = await callWithRetry(3);
 
     if (data.error) {
       console.error('Claude API error:', data.error);
-      return res.status(500).json({ error: 'API error: ' + data.error.message });
+      return res.status(500).json({ error: 'API error: ' + (data.error.message || data.error.type) });
     }
 
     if (!data.content || data.content.length === 0) {
@@ -102,7 +128,6 @@ FORMAT - CRITICAL:
     
     // If there's no quote mark, find the meat of the response
     if (!quote.includes('"')) {
-      // Remove common preambles
       quote = quote.replace(/^(Let me search|I'll search|Searching|Looking for|Here's)[^.]*\.\s*/gi, '');
       quote = '"' + quote + '"';
     }
