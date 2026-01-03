@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SportsGuy</title>
     
-    <!-- Google Fonts: Instrument Serif + Anton -->
+    <!-- Google Fonts: Instrument Serif + Anton + Inter Tight -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -30,21 +30,37 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html, body {
+            height: 100%;
+            min-height: 100%;
+            min-height: -webkit-fill-available;
+        }
+
         body {
             font-family: 'Anton', sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
             min-height: 100dvh;
+            min-height: -webkit-fill-available;
             overflow-x: hidden;
+            position: fixed;
+            width: 100%;
         }
 
         .screen {
             display: none;
             flex-direction: column;
-            min-height: 100vh;
-            min-height: 100dvh;
-            position: relative;
+            height: 100%;
+            height: 100dvh;
+            height: -webkit-fill-available;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            overflow: hidden;
         }
 
         .screen.active {
@@ -152,27 +168,19 @@
             fill: var(--text);
         }
 
-        /* Arrow pointing to location - curved like mock */
+        /* Arrow pointing to location - using PNG image */
         .arrow-container {
             position: absolute;
-            top: 70px;
-            right: 44px;
-            width: 80px;
-            height: 140px;
+            top: 100px;
+            right: 80px;
+            width: 100px;
+            height: 160px;
         }
 
-        .arrow-svg {
+        .arrow-img {
             width: 100%;
             height: 100%;
-            overflow: visible;
-        }
-
-        .arrow-path {
-            fill: none;
-            stroke: var(--green);
-            stroke-width: 2.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+            object-fit: contain;
         }
 
         /* ==================== LOADING SCREEN ==================== */
@@ -317,6 +325,8 @@
             flex-direction: column;
             justify-content: center;
             padding: 40px 28px;
+            padding-bottom: 100px;
+            overflow-y: auto;
         }
 
         .quote-container {
@@ -338,14 +348,19 @@
         }
 
         .quote-hint {
+            position: fixed;
+            bottom: env(safe-area-inset-bottom, 20px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+            left: 0;
+            right: 0;
             text-align: center;
-            margin-top: 40px;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 0.875rem;
             font-weight: 400;
             color: var(--text-muted);
             opacity: 0;
             transition: opacity 0.3s ease;
+            padding-bottom: 20px;
         }
 
         .quote-hint.visible {
@@ -365,6 +380,69 @@
             0% { opacity: 0; filter: blur(15px); }
             50% { opacity: 0.6; filter: blur(8px); }
             100% { opacity: 1; filter: blur(0px); }
+        }
+
+        /* Mini loader for regeneration */
+        #mini-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 50;
+        }
+
+        #mini-loader.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mini-loader-gradient {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            background-image: url('icons/gradient.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .mini-loader-balls {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            transition: transform 0.6s ease, opacity 0.6s ease;
+        }
+
+        .mini-loader-balls img {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+        }
+
+        .mini-loader-balls img:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .mini-loader-balls img:nth-child(2) { top: 18%; right: 5%; }
+        .mini-loader-balls img:nth-child(3) { bottom: 18%; right: 5%; }
+        .mini-loader-balls img:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .mini-loader-balls img:nth-child(5) { bottom: 18%; left: 5%; }
+        .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
+
+        .mini-loader-balls.spinning {
+            animation: rotateBalls 4s linear infinite;
+        }
+
+        .mini-loader-balls.explode {
+            transform: scale(3);
+            opacity: 0;
+            filter: blur(10px);
         }
 
         /* ==================== SPORT MODAL ==================== */
@@ -685,10 +763,7 @@
         
         <!-- Curved arrow pointing to location icon -->
         <div class="arrow-container">
-            <svg class="arrow-svg" viewBox="0 0 80 140">
-                <path class="arrow-path" d="M25 130 Q 25 70, 45 45 Q 60 25, 55 8" />
-                <path class="arrow-path" d="M48 3 L 55 8 L 62 5" />
-            </svg>
+            <img class="arrow-img" src="icons/Arrow.png" alt="">
         </div>
         
         <div class="onboarding-content">
@@ -1073,12 +1148,60 @@
         }
 
         async function generateQuote() {
+            // Show mini loading state
             el.quoteContainer.classList.add('loading');
+            el.quoteHint.classList.remove('visible');
+            
+            // Show the loading overlay with spinning balls
+            showMiniLoader();
+            
             const quote = await fetchQuote();
+            
+            // Hide loader and show quote
+            hideMiniLoader();
             el.quoteText.textContent = quote;
             el.quoteContainer.classList.remove('loading');
             el.quoteContainer.classList.add('revealing');
-            setTimeout(() => el.quoteContainer.classList.remove('revealing'), 1500);
+            
+            setTimeout(() => {
+                el.quoteContainer.classList.remove('revealing');
+                el.quoteHint.classList.add('visible');
+            }, 1500);
+        }
+
+        function showMiniLoader() {
+            // Create mini loader if doesn't exist
+            if (!document.getElementById('mini-loader')) {
+                const loader = document.createElement('div');
+                loader.id = 'mini-loader';
+                loader.innerHTML = `
+                    <div class="mini-loader-gradient"></div>
+                    <div class="mini-loader-balls">
+                        <img src="icons/Basketball.png" alt="">
+                        <img src="icons/Football.png" alt="">
+                        <img src="icons/Tennis.png" alt="">
+                        <img src="icons/Soccer.png" alt="">
+                        <img src="icons/Golf.png" alt="">
+                        <img src="icons/Baseball.png" alt="">
+                    </div>
+                `;
+                document.getElementById('main-screen').appendChild(loader);
+            }
+            
+            const loader = document.getElementById('mini-loader');
+            loader.classList.add('visible');
+            setTimeout(() => loader.querySelector('.mini-loader-balls').classList.add('spinning'), 100);
+        }
+
+        function hideMiniLoader() {
+            const loader = document.getElementById('mini-loader');
+            if (loader) {
+                loader.querySelector('.mini-loader-balls').classList.add('explode');
+                setTimeout(() => {
+                    loader.classList.remove('visible');
+                    loader.querySelector('.mini-loader-balls').classList.remove('spinning', 'explode');
+                }, 600);
+            }
         }
 
         // ==================== SPORT SELECTION ====================
