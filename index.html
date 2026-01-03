@@ -298,21 +298,16 @@
 
         @keyframes rotateBalls {
             0% { transform: rotate(0deg) scale(0.9); }
-            8% { transform: rotate(30deg) scale(0.95); }
-            15% { transform: rotate(80deg) scale(1.15); }
-            22% { transform: rotate(130deg) scale(1.2); }
-            30% { transform: rotate(160deg) scale(1.0); }
-            40% { transform: rotate(180deg) scale(0.9); }
-            48% { transform: rotate(210deg) scale(0.95); }
-            55% { transform: rotate(260deg) scale(1.15); }
-            62% { transform: rotate(310deg) scale(1.2); }
-            70% { transform: rotate(340deg) scale(1.0); }
-            85% { transform: rotate(355deg) scale(0.92); }
             100% { transform: rotate(360deg) scale(0.9); }
         }
 
+        @keyframes ballPulse {
+            0%, 100% { transform: scale(0.9); }
+            50% { transform: scale(1.15); }
+        }
+
         .loading-balls-container.spinning {
-            animation: rotateBalls 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            animation: rotateBalls 3s linear infinite, ballPulse 2s ease-in-out infinite;
         }
 
         .loading-quote-text {
@@ -341,6 +336,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
+            position: relative;
+            z-index: 60;
+            background: var(--bg);
         }
 
         .icon-btn {
@@ -402,11 +400,16 @@
 
         .quote-container {
             cursor: pointer;
-            transition: opacity 0.5s ease, filter 1s ease;
+            transition: opacity 0.5s ease, filter 0.5s ease;
         }
 
         .quote-container:active {
             opacity: 0.7;
+        }
+
+        .quote-container.blurred {
+            filter: blur(8px);
+            opacity: 0.6;
         }
 
         .quote {
@@ -456,7 +459,7 @@
         /* Mini loader for regeneration */
         #mini-loader {
             position: fixed;
-            top: 0;
+            top: 80px;
             left: 0;
             right: 0;
             bottom: 0;
@@ -509,7 +512,7 @@
         .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
 
         .mini-loader-balls.spinning {
-            animation: rotateBalls 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            animation: rotateBalls 3s linear infinite, ballPulse 2s ease-in-out infinite;
         }
 
         .mini-loader-balls.explode {
@@ -1511,11 +1514,15 @@
         function showSportModal() {
             screens.sport.classList.add('active');
             el.modalOverlay.classList.add('active');
+            // Blur the quote content
+            el.quoteContainer.classList.add('blurred');
         }
 
         function hideSportModal() {
             screens.sport.classList.remove('active');
             el.modalOverlay.classList.remove('active');
+            // Unblur the quote content
+            el.quoteContainer.classList.remove('blurred');
         }
 
         function selectSport(sport, icon) {
