@@ -236,20 +236,28 @@
 
         .loading-gradient.visible {
             opacity: 1;
-            animation: gradientMorph 6s ease-in-out infinite;
+            animation: gradientMorph 4s ease-in-out infinite;
         }
 
         @keyframes gradientMorph {
             0% { 
-                transform: scale(0.95); 
+                transform: scale(0.4); 
+                filter: hue-rotate(0deg) saturate(1);
+            }
+            40% { 
+                transform: scale(0.4); 
                 filter: hue-rotate(0deg) saturate(1);
             }
             50% { 
-                transform: scale(1.15); 
-                filter: hue-rotate(15deg) saturate(1.1);
+                transform: scale(1.8); 
+                filter: hue-rotate(10deg) saturate(1.1);
+            }
+            90% { 
+                transform: scale(1.8); 
+                filter: hue-rotate(10deg) saturate(1.1);
             }
             100% { 
-                transform: scale(0.95); 
+                transform: scale(0.4); 
                 filter: hue-rotate(0deg) saturate(1);
             }
         }
@@ -288,45 +296,43 @@
         .loading-ball:nth-child(6) { top: 20%; left: 0; }
 
         @keyframes rotateBalls {
+            /* Small and still */
             0% { 
-                transform: rotate(0deg) scale(0.95); 
-                filter: blur(0px);
+                transform: rotate(0deg) scale(0.7); 
             }
-            10% { 
-                transform: rotate(60deg) scale(1.0); 
-                filter: blur(1px);
+            /* Still small, barely moving */
+            35% { 
+                transform: rotate(20deg) scale(0.7); 
             }
-            20% { 
-                transform: rotate(180deg) scale(1.1); 
-                filter: blur(2px);
+            /* Expand and start spinning fast */
+            40% { 
+                transform: rotate(30deg) scale(1.0); 
             }
-            30% { 
-                transform: rotate(220deg) scale(1.05); 
-                filter: blur(1px);
+            /* Fast spinning while expanded - 10 rotations worth */
+            45% { 
+                transform: rotate(720deg) scale(1.15); 
             }
             50% { 
-                transform: rotate(240deg) scale(0.95); 
-                filter: blur(0px);
+                transform: rotate(1440deg) scale(1.2); 
+            }
+            55% { 
+                transform: rotate(2160deg) scale(1.2); 
             }
             60% { 
-                transform: rotate(260deg) scale(1.0); 
-                filter: blur(0px);
+                transform: rotate(2880deg) scale(1.15); 
             }
-            70% { 
-                transform: rotate(300deg) scale(1.05); 
-                filter: blur(1px);
+            65% { 
+                transform: rotate(3600deg) scale(1.1); 
             }
-            80% { 
-                transform: rotate(350deg) scale(1.1); 
-                filter: blur(2px);
+            /* Slow down and contract */
+            75% { 
+                transform: rotate(3650deg) scale(0.9); 
             }
-            90% { 
-                transform: rotate(358deg) scale(1.0); 
-                filter: blur(1px);
+            85% { 
+                transform: rotate(3670deg) scale(0.75); 
             }
             100% { 
-                transform: rotate(360deg) scale(0.95); 
-                filter: blur(0px);
+                transform: rotate(3680deg) scale(0.7); 
             }
         }
 
@@ -511,7 +517,7 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            animation: gradientMorph 8s ease-in-out infinite;
+            animation: gradientMorph 4s ease-in-out infinite;
         }
 
         .mini-loader-balls {
