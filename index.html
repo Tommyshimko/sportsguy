@@ -39,20 +39,225 @@
             overflow-x: hidden;
         }
 
-        /* Screen containers */
         .screen {
             display: none;
             flex-direction: column;
             min-height: 100vh;
             min-height: 100dvh;
+            position: relative;
         }
 
         .screen.active {
             display: flex;
         }
 
-        /* Header */
-        header {
+        /* ==================== ONBOARDING ==================== */
+        .onboarding-screen {
+            justify-content: center;
+            align-items: center;
+            padding: 40px 28px;
+            text-align: center;
+        }
+
+        .onboarding-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .onboarding-title-serif {
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 2rem;
+            font-style: italic;
+            font-weight: 400;
+            line-height: 1.2;
+        }
+
+        .onboarding-title-sans {
+            font-family: 'Anton', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .onboarding-subtitle {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            margin-top: -4px;
+        }
+
+        .lfg-btn {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            border: none;
+            border-radius: 20px;
+            padding: 18px 64px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 400;
+            color: var(--green);
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .lfg-btn:hover {
+            transform: translateX(-50%) scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .lfg-btn:active {
+            transform: translateX(-50%) scale(0.98);
+        }
+
+        /* Location hint button in top right */
+        .location-hint-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .location-hint-btn:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .location-hint-btn:active {
+            transform: scale(0.95);
+        }
+
+        .location-hint-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text);
+        }
+
+        /* Arrow pointing to location - curved like mock */
+        .arrow-container {
+            position: absolute;
+            top: 80px;
+            right: 60px;
+            width: 100px;
+            height: 120px;
+        }
+
+        .arrow-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .arrow-path {
+            fill: none;
+            stroke: var(--green);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ==================== LOADING SCREEN ==================== */
+        #loading-screen {
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .loading-gradient {
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            background-image: url('icons/gradient.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        .loading-gradient.visible {
+            opacity: 1;
+        }
+
+        .loading-balls-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            opacity: 0;
+            transition: opacity 0.8s ease, transform 1.5s ease;
+        }
+
+        .loading-balls-container.visible {
+            opacity: 1;
+        }
+
+        .loading-balls-container.explode {
+            transform: scale(5);
+            opacity: 0;
+            filter: blur(20px);
+        }
+
+        .loading-ball {
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+        }
+
+        /* Position balls in a circle */
+        .loading-ball:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); } /* basketball - top */
+        .loading-ball:nth-child(2) { top: 20%; right: 0; } /* football - top right */
+        .loading-ball:nth-child(3) { bottom: 20%; right: 5%; } /* tennis - bottom right */
+        .loading-ball:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); } /* soccer - bottom */
+        .loading-ball:nth-child(5) { bottom: 20%; left: 5%; } /* golf - bottom left */
+        .loading-ball:nth-child(6) { top: 20%; left: 0; } /* baseball - top left */
+
+        @keyframes rotateBalls {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-balls-container.spinning {
+            animation: rotateBalls 8s linear infinite;
+        }
+
+        .loading-quote-text {
+            position: absolute;
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 1rem;
+            font-style: italic;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 200px;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        .loading-quote-text.visible {
+            opacity: 1;
+        }
+
+        /* ==================== MAIN SCREEN ==================== */
+        #main-screen header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -103,15 +308,9 @@
             text-transform: uppercase;
         }
 
-        .text-green {
-            color: var(--green);
-        }
+        .text-green { color: var(--green); }
+        .text-blue { color: var(--blue); }
 
-        .text-blue {
-            color: var(--blue);
-        }
-
-        /* Main Screen */
         #main-screen main {
             flex: 1;
             display: flex;
@@ -122,7 +321,7 @@
 
         .quote-container {
             cursor: pointer;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.5s ease, filter 1s ease;
         }
 
         .quote-container:active {
@@ -153,32 +352,25 @@
             opacity: 1;
         }
 
-        /* Modal Overlay */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.3);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            z-index: 100;
+        .quote-container.loading {
+            filter: blur(8px);
+            opacity: 0.4;
         }
 
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
+        .quote-container.revealing {
+            animation: revealQuote 1.5s ease forwards;
         }
 
-        /* Sport Selection Screen */
+        @keyframes revealQuote {
+            0% { opacity: 0; filter: blur(15px); }
+            50% { opacity: 0.6; filter: blur(8px); }
+            100% { opacity: 1; filter: blur(0px); }
+        }
+
+        /* ==================== SPORT MODAL ==================== */
         #sport-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg);
             z-index: 101;
             transform: translateY(100%);
@@ -254,13 +446,10 @@
             color: var(--text);
         }
 
-        /* Location Screen */
+        /* ==================== LOCATION MODAL ==================== */
         #location-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg);
             z-index: 101;
             transform: translateY(100%);
@@ -314,6 +503,11 @@
             cursor: pointer;
             opacity: 0.5;
             transition: opacity 0.2s ease;
+            display: none;
+        }
+
+        .clear-btn.visible {
+            display: block;
         }
 
         .clear-btn:hover {
@@ -349,6 +543,11 @@
             padding: 16px 0;
             border-bottom: 1px solid var(--border);
             cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .current-location:active {
+            opacity: 0.7;
         }
 
         .current-location svg {
@@ -373,7 +572,11 @@
             color: var(--text-muted);
         }
 
-        .current-location-text span {
+        .current-location-text .status-success {
+            color: var(--green);
+        }
+
+        .current-location-text .retry-link {
             color: var(--green);
             cursor: pointer;
         }
@@ -399,34 +602,137 @@
             border-bottom: none;
         }
 
-        /* Loading state */
-        .loading .quote {
+        .confirm-location-btn {
+            position: fixed;
+            bottom: 40px;
+            left: 20px;
+            right: 20px;
+            background: var(--green);
+            border: none;
+            border-radius: 16px;
+            padding: 18px 32px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 400;
+            color: white;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            z-index: 102;
+        }
+
+        .confirm-location-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .confirm-location-btn:active {
+            transform: scale(0.98);
+        }
+
+        .confirm-location-btn:disabled {
             opacity: 0.5;
-            animation: pulse 1.5s ease-in-out infinite;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.7; }
+        .recent-header {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-top: 16px;
+            margin-bottom: 8px;
         }
 
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 100;
         }
 
-        .quote-container {
-            animation: fadeIn 0.5s ease-out;
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
         }
     </style>
 </head>
 <body>
+    <!-- Onboarding Screen 1: Welcome -->
+    <div id="onboarding-1" class="screen onboarding-screen active">
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">Have you ever</span>
+            <span class="onboarding-title-serif">wanted to be a</span>
+            <div class="onboarding-title-sans">
+                <span class="text-green">SPORTS</span><span class="text-blue">GUY?</span>
+            </div>
+        </div>
+        <button class="lfg-btn" id="lfg-btn">LFG</button>
+    </div>
+
+    <!-- Onboarding Screen 2: Location Prompt -->
+    <div id="onboarding-2" class="screen onboarding-screen">
+        <button class="location-hint-btn" id="location-hint-btn" aria-label="Set location">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </button>
+        
+        <!-- Curved arrow pointing to location icon -->
+        <div class="arrow-container">
+            <svg class="arrow-svg" viewBox="0 0 100 120">
+                <path class="arrow-path" d="M20 100 Q 30 60, 50 40 Q 70 20, 85 25" />
+                <path class="arrow-path" d="M75 15 L 85 25 L 78 35" />
+            </svg>
+        </div>
+        
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">first, set your</span>
+            <span class="onboarding-title-sans text-blue">LOCATION</span>
+        </div>
+    </div>
+
+    <!-- Onboarding Screen 3: Success -->
+    <div id="onboarding-3" class="screen onboarding-screen">
+        <button class="location-hint-btn" style="pointer-events: none;" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </button>
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">hell yea!</span>
+            <span class="onboarding-title-sans text-green">SPORTS.</span>
+            <div class="onboarding-subtitle">
+                <span>(</span><span class="text-blue">GUY</span><span>)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <button class="location-hint-btn" style="pointer-events: none;" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </button>
+        <div class="loading-gradient" id="loading-gradient"></div>
+        <div class="loading-balls-container" id="loading-balls">
+            <img class="loading-ball" src="icons/basketball.png" alt="">
+            <img class="loading-ball" src="icons/football.png" alt="">
+            <img class="loading-ball" src="icons/tennis.png" alt="">
+            <img class="loading-ball" src="icons/soccer.png" alt="">
+            <img class="loading-ball" src="icons/golf.png" alt="">
+            <img class="loading-ball" src="icons/baseball.png" alt="">
+        </div>
+        <p class="loading-quote-text" id="loading-quote-text">"It's hard to beat someone who never gives up."</p>
+    </div>
+
     <!-- Main Screen -->
-    <div id="main-screen" class="screen active">
+    <div id="main-screen" class="screen">
         <header>
             <button class="icon-btn" id="sport-btn" aria-label="Choose sport">
-                <img id="current-sport-icon" src="icons/basketball.png" alt="Basketball">
+                <img id="current-sport-icon" src="icons/basketball.png" alt="Sport">
             </button>
             <div class="logo">
                 <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
@@ -435,16 +741,15 @@
                 <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
             </button>
         </header>
-        
         <main>
             <div class="quote-container" id="quote-container">
-                <p class="quote" id="quote-text">"Man, that Knicks-Pacers series was brutal. You could just see how gassed they were by Game 6—Brunson gave everything, and losing OG killed their defense. Still, this team's finally got an identity. Add one more star and they're a real contender."</p>
+                <p class="quote" id="quote-text"></p>
             </div>
             <p class="quote-hint" id="quote-hint">Tap to generate a new take</p>
         </main>
     </div>
 
-    <!-- Sport Selection Screen -->
+    <!-- Sport Selection Modal -->
     <div id="sport-screen" class="screen">
         <header class="modal-header">
             <button class="icon-btn" id="close-sport-btn" aria-label="Close">
@@ -454,13 +759,12 @@
                 <span class="text-green">CHOOSE</span> <span class="text-blue">SPORT</span>
             </div>
         </header>
-        
         <div class="sport-grid">
             <button class="sport-card" data-sport="baseball" data-icon="icons/baseball.png">
                 <img class="sport-icon" src="icons/baseball.png" alt="Baseball">
                 <span class="sport-name">Baseball</span>
             </button>
-            <button class="sport-card selected" data-sport="basketball" data-icon="icons/basketball.png">
+            <button class="sport-card" data-sport="basketball" data-icon="icons/basketball.png">
                 <img class="sport-icon" src="icons/basketball.png" alt="Basketball">
                 <span class="sport-name">Basketball</span>
             </button>
@@ -483,7 +787,7 @@
         </div>
     </div>
 
-    <!-- Location Screen -->
+    <!-- Location Modal -->
     <div id="location-screen" class="screen">
         <header class="modal-header">
             <button class="icon-btn" id="close-location-btn" aria-label="Back">
@@ -493,224 +797,408 @@
                 <span class="text-green">YOUR</span> <span class="text-blue">LOCATION</span>
             </div>
         </header>
-        
         <div class="location-content">
             <div class="search-bar">
                 <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                <input type="text" id="location-input" placeholder="Enter city or zip code" value="Brooklyn, NY">
+                <input type="text" id="location-input" placeholder="Enter zip code or city">
                 <button class="clear-btn" id="clear-location">
                     <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
                 <button class="cancel-btn" id="cancel-location">Cancel</button>
             </div>
-            
             <div class="current-location" id="use-current-location">
                 <svg viewBox="0 0 24 24"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z" transform="rotate(-90 12 12)"/></svg>
                 <div class="current-location-text">
                     <h3>Current location</h3>
-                    <p>We're unable to find you. <span id="retry-location">Retry?</span></p>
+                    <p id="location-status">Tap to detect your location</p>
                 </div>
             </div>
-            
-            <ul class="location-list" id="location-suggestions">
-                <li class="location-item">Menlo Park, CA</li>
-                <li class="location-item">Menlo Park Mall, Personage Road, Edison, NJ</li>
-                <li class="location-item">Menlo Park, NJ</li>
-                <li class="location-item">Menlo Park Terrace, Woodbridge Township, NJ</li>
-                <li class="location-item">Menlo Bridge, Orlando</li>
-            </ul>
+            <div class="recent-header" id="recent-header" style="display: none;">Recent</div>
+            <ul class="location-list" id="location-suggestions"></ul>
         </div>
+        <button class="confirm-location-btn" id="confirm-location-btn" disabled>Set Location</button>
     </div>
 
     <!-- Modal Overlay -->
     <div class="modal-overlay" id="modal-overlay"></div>
 
     <script>
-        // State
-        let currentSport = 'basketball';
-        let currentIcon = 'icons/basketball.png';
-        let currentLocation = 'Brooklyn, NY';
-        let hasInteracted = false;
+        // ==================== STATE ====================
+        let currentSport = '';
+        let currentIcon = '';
+        let currentLocation = '';
+        let hasCompletedOnboarding = localStorage.getItem('sportsguy_onboarded') === 'true';
+        let recentLocations = JSON.parse(localStorage.getItem('sportsguy_recent_locations') || '[]');
+        let pendingQuote = '';
 
-        // DOM Elements
-        const mainScreen = document.getElementById('main-screen');
-        const sportScreen = document.getElementById('sport-screen');
-        const locationScreen = document.getElementById('location-screen');
-        const modalOverlay = document.getElementById('modal-overlay');
-        
-        const sportBtn = document.getElementById('sport-btn');
-        const locationBtn = document.getElementById('location-btn');
-        const closeSportBtn = document.getElementById('close-sport-btn');
-        const closeLocationBtn = document.getElementById('close-location-btn');
-        const cancelLocationBtn = document.getElementById('cancel-location');
-        
-        const currentSportIcon = document.getElementById('current-sport-icon');
-        const quoteContainer = document.getElementById('quote-container');
-        const quoteText = document.getElementById('quote-text');
-        const quoteHint = document.getElementById('quote-hint');
-        
-        const locationInput = document.getElementById('location-input');
-        const clearLocationBtn = document.getElementById('clear-location');
-        const locationSuggestions = document.getElementById('location-suggestions');
+        // ==================== DOM ELEMENTS ====================
+        const $ = id => document.getElementById(id);
 
-        // Fallback quotes in case API fails
-        const fallbackQuotes = {
-            basketball: `"Man, the league is wild right now. Every night there's a new highlight reel play. You gotta stay locked in just to keep up with all the storylines."`,
-            baseball: `"This season's been something else. The young talent coming up is unreal—these kids are playing with no fear."`,
-            football: `"The parity in the league this year is crazy. Any given Sunday isn't just a saying anymore, it's the reality."`,
-            soccer: `"The tactical evolution we're seeing is next level. These managers are playing 4D chess out there."`,
-            golf: `"The depth on tour right now is insane. You can't take a week off or you'll drop 20 spots in the rankings."`,
-            tennis: `"The changing of the guard is finally here. New generation is taking over and they're not giving it back."`,
+        const screens = {
+            onboarding1: $('onboarding-1'),
+            onboarding2: $('onboarding-2'),
+            onboarding3: $('onboarding-3'),
+            loading: $('loading-screen'),
+            main: $('main-screen'),
+            sport: $('sport-screen'),
+            location: $('location-screen')
         };
 
-        // Functions
-        function openSportScreen() {
-            sportScreen.classList.add('active');
-            modalOverlay.classList.add('active');
+        const el = {
+            lfgBtn: $('lfg-btn'),
+            locationHintBtn: $('location-hint-btn'),
+            sportBtn: $('sport-btn'),
+            locationBtn: $('location-btn'),
+            closeSportBtn: $('close-sport-btn'),
+            closeLocationBtn: $('close-location-btn'),
+            cancelLocationBtn: $('cancel-location'),
+            confirmLocationBtn: $('confirm-location-btn'),
+            currentSportIcon: $('current-sport-icon'),
+            quoteContainer: $('quote-container'),
+            quoteText: $('quote-text'),
+            quoteHint: $('quote-hint'),
+            locationInput: $('location-input'),
+            clearLocationBtn: $('clear-location'),
+            locationSuggestions: $('location-suggestions'),
+            locationStatus: $('location-status'),
+            useCurrentLocation: $('use-current-location'),
+            loadingGradient: $('loading-gradient'),
+            loadingBalls: $('loading-balls'),
+            loadingQuoteText: $('loading-quote-text'),
+            modalOverlay: $('modal-overlay'),
+            recentHeader: $('recent-header')
+        };
+
+        // ==================== FALLBACK QUOTES ====================
+        const fallbackQuotes = {
+            basketball: `"Man, the league is wild right now. Every night there's a new highlight reel play."`,
+            baseball: `"This season's been something else. The young talent coming up is unreal."`,
+            football: `"The parity in the league this year is crazy. Any given Sunday."`,
+            soccer: `"The tactical evolution we're seeing is next level."`,
+            golf: `"The depth on tour right now is insane."`,
+            tennis: `"The changing of the guard is finally here."`,
+        };
+
+        // ==================== UTILITIES ====================
+        const delay = ms => new Promise(r => setTimeout(r, ms));
+
+        function showScreen(name) {
+            Object.values(screens).forEach(s => s?.classList.remove('active'));
+            screens[name]?.classList.add('active');
         }
 
-        function closeSportScreen() {
-            sportScreen.classList.remove('active');
-            modalOverlay.classList.remove('active');
+        // ==================== SEASONAL SPORT ====================
+        function getSeasonalSport() {
+            const month = new Date().getMonth();
+            if (month >= 8 || month <= 1) return { sport: 'football', icon: 'icons/football.png' };
+            if (month >= 2 && month <= 5) return { sport: 'basketball', icon: 'icons/basketball.png' };
+            return { sport: 'baseball', icon: 'icons/baseball.png' };
         }
 
-        function openLocationScreen() {
-            locationScreen.classList.add('active');
-            modalOverlay.classList.add('active');
-            locationInput.focus();
+        function initializeSport() {
+            const seasonal = getSeasonalSport();
+            currentSport = seasonal.sport;
+            currentIcon = seasonal.icon;
+            el.currentSportIcon.src = currentIcon;
+            document.querySelectorAll('.sport-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.sport === currentSport);
+            });
         }
 
-        function closeLocationScreen() {
-            locationScreen.classList.remove('active');
-            modalOverlay.classList.remove('active');
+        // ==================== LOCATION ====================
+        function showLocationModal(isOnboarding = false) {
+            screens.location.classList.add('active');
+            el.modalOverlay.classList.add('active');
+            screens.location.dataset.isOnboarding = isOnboarding;
+            el.locationInput.value = '';
+            el.clearLocationBtn.classList.remove('visible');
+            el.confirmLocationBtn.textContent = isOnboarding ? 'Continue' : 'Set Location';
+            updateLocationSuggestions();
+        }
+
+        function hideLocationModal() {
+            screens.location.classList.remove('active');
+            el.modalOverlay.classList.remove('active');
+        }
+
+        function detectCurrentLocation() {
+            el.locationStatus.textContent = 'Detecting...';
+
+            if (!navigator.geolocation) {
+                el.locationStatus.textContent = 'Not supported. Enter manually.';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+                        const data = await res.json();
+                        const city = data.city || data.locality || 'Unknown';
+                        const state = data.principalSubdivision || '';
+                        const location = state ? `${city}, ${state}` : city;
+                        
+                        el.locationStatus.textContent = location;
+                        el.locationStatus.className = 'status-success';
+                        el.locationInput.value = location;
+                        el.confirmLocationBtn.disabled = false;
+                        el.clearLocationBtn.classList.add('visible');
+                    } catch {
+                        el.locationStatus.innerHTML = 'Unable to detect. <span class="retry-link">Retry?</span>';
+                    }
+                },
+                () => {
+                    el.locationStatus.innerHTML = 'Access denied. <span class="retry-link">Retry?</span>';
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        function updateLocationSuggestions() {
+            el.locationSuggestions.innerHTML = '';
+            if (recentLocations.length > 0) {
+                el.recentHeader.style.display = 'block';
+                recentLocations.forEach(loc => {
+                    const li = document.createElement('li');
+                    li.className = 'location-item';
+                    li.textContent = loc;
+                    el.locationSuggestions.appendChild(li);
+                });
+            } else {
+                el.recentHeader.style.display = 'none';
+            }
+        }
+
+        function saveRecentLocation(location) {
+            if (!location) return;
+            recentLocations = recentLocations.filter(l => l !== location);
+            recentLocations.unshift(location);
+            recentLocations = recentLocations.slice(0, 5);
+            localStorage.setItem('sportsguy_recent_locations', JSON.stringify(recentLocations));
+        }
+
+        function selectLocation(location) {
+            if (!location) return;
+            currentLocation = location;
+            saveRecentLocation(location);
+            
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            
+            if (isOnboarding) {
+                startLoadingSequence();
+            } else {
+                generateQuote();
+            }
+        }
+
+        // ==================== LOADING SEQUENCE ====================
+        async function startLoadingSequence() {
+            // Show "hell yea! SPORTS." briefly
+            showScreen('onboarding3');
+            await delay(1500);
+
+            // Transition to loading screen
+            showScreen('loading');
+
+            // Start fetching quote in background
+            const quotePromise = fetchQuote();
+
+            // Fade in gradient
+            await delay(300);
+            el.loadingGradient.classList.add('visible');
+
+            // Show and spin balls
+            await delay(800);
+            el.loadingBalls.classList.add('visible', 'spinning');
+            el.loadingQuoteText.classList.add('visible');
+
+            // Wait for quote to be ready
+            pendingQuote = await quotePromise;
+
+            // Let it spin for a bit
+            await delay(3000);
+
+            // Explode balls outward
+            el.loadingBalls.classList.add('explode');
+            el.loadingQuoteText.classList.remove('visible');
+            el.loadingGradient.classList.remove('visible');
+
+            await delay(1200);
+
+            // Show main screen with the quote
+            completeOnboarding();
+        }
+
+        function completeOnboarding() {
+            localStorage.setItem('sportsguy_onboarded', 'true');
+            hasCompletedOnboarding = true;
+            
+            el.quoteText.textContent = pendingQuote;
+            showScreen('main');
+            
+            el.quoteContainer.classList.add('revealing');
+            setTimeout(() => el.quoteContainer.classList.remove('revealing'), 1500);
+            setTimeout(() => el.quoteHint.classList.add('visible'), 3000);
+        }
+
+        // ==================== QUOTE GENERATION ====================
+        async function fetchQuote() {
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sport: currentSport, location: currentLocation })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                return data.quote;
+            } catch (error) {
+                console.error('Error:', error);
+                return fallbackQuotes[currentSport] || fallbackQuotes.basketball;
+            }
+        }
+
+        async function generateQuote() {
+            el.quoteContainer.classList.add('loading');
+            const quote = await fetchQuote();
+            el.quoteText.textContent = quote;
+            el.quoteContainer.classList.remove('loading');
+            el.quoteContainer.classList.add('revealing');
+            setTimeout(() => el.quoteContainer.classList.remove('revealing'), 1500);
+        }
+
+        // ==================== SPORT SELECTION ====================
+        function showSportModal() {
+            screens.sport.classList.add('active');
+            el.modalOverlay.classList.add('active');
+        }
+
+        function hideSportModal() {
+            screens.sport.classList.remove('active');
+            el.modalOverlay.classList.remove('active');
         }
 
         function selectSport(sport, icon) {
             currentSport = sport;
             currentIcon = icon;
-            currentSportIcon.src = icon;
-            
-            // Update selected state
+            el.currentSportIcon.src = icon;
             document.querySelectorAll('.sport-card').forEach(card => {
-                card.classList.remove('selected');
-                if (card.dataset.sport === sport) {
-                    card.classList.add('selected');
-                }
+                card.classList.toggle('selected', card.dataset.sport === sport);
             });
-            
-            // Generate new quote and close
-            generateQuote();
-            closeSportScreen();
-        }
-
-        function selectLocation(location) {
-            currentLocation = location;
-            locationInput.value = location;
-            closeLocationScreen();
+            hideSportModal();
             generateQuote();
         }
 
-        async function generateQuote() {
-            // Add loading state
-            quoteContainer.classList.add('loading');
-            quoteText.textContent = 'Getting the latest take...';
+        // ==================== EVENT LISTENERS ====================
+        // Onboarding
+        el.lfgBtn.addEventListener('click', () => showScreen('onboarding2'));
+        
+        // Location hint button - user must tap this to proceed
+        el.locationHintBtn.addEventListener('click', () => showLocationModal(true));
 
-            try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sport: currentSport,
-                        location: currentLocation
-                    })
-                });
+        // Location modal
+        el.useCurrentLocation.addEventListener('click', detectCurrentLocation);
+        
+        el.locationInput.addEventListener('input', (e) => {
+            const hasValue = e.target.value.length > 0;
+            el.clearLocationBtn.classList.toggle('visible', hasValue);
+            el.confirmLocationBtn.disabled = !hasValue;
+        });
 
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                quoteText.textContent = data.quote;
-
-            } catch (error) {
-                console.error('Error generating quote:', error);
-                // Use fallback quote on error
-                const fallback = fallbackQuotes[currentSport] || fallbackQuotes.basketball;
-                quoteText.textContent = fallback;
+        el.locationInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value) {
+                selectLocation(e.target.value);
             }
-
-            quoteContainer.classList.remove('loading');
-            
-            // Trigger animation
-            quoteContainer.style.animation = 'none';
-            quoteContainer.offsetHeight; // Trigger reflow
-            quoteContainer.style.animation = 'fadeIn 0.5s ease-out';
-        }
-
-        // Event Listeners
-        sportBtn.addEventListener('click', openSportScreen);
-        locationBtn.addEventListener('click', openLocationScreen);
-        closeSportBtn.addEventListener('click', closeSportScreen);
-        closeLocationBtn.addEventListener('click', closeLocationScreen);
-        cancelLocationBtn.addEventListener('click', closeLocationScreen);
-        modalOverlay.addEventListener('click', () => {
-            closeSportScreen();
-            closeLocationScreen();
         });
 
-        // Sport selection
-        document.querySelectorAll('.sport-card').forEach(card => {
-            card.addEventListener('click', () => {
-                selectSport(card.dataset.sport, card.dataset.icon);
-            });
+        el.clearLocationBtn.addEventListener('click', () => {
+            el.locationInput.value = '';
+            el.clearLocationBtn.classList.remove('visible');
+            el.confirmLocationBtn.disabled = true;
+            el.locationInput.focus();
         });
 
-        // Location selection
-        locationSuggestions.addEventListener('click', (e) => {
+        el.cancelLocationBtn.addEventListener('click', () => {
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            if (isOnboarding) showScreen('onboarding2');
+        });
+
+        el.confirmLocationBtn.addEventListener('click', () => {
+            const location = el.locationInput.value.trim();
+            if (location) selectLocation(location);
+        });
+
+        el.closeLocationBtn.addEventListener('click', () => {
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            if (isOnboarding) showScreen('onboarding2');
+        });
+
+        el.locationSuggestions.addEventListener('click', (e) => {
             if (e.target.classList.contains('location-item')) {
-                selectLocation(e.target.textContent);
+                el.locationInput.value = e.target.textContent;
+                el.confirmLocationBtn.disabled = false;
+                el.clearLocationBtn.classList.add('visible');
             }
         });
 
-        // Clear location input
-        clearLocationBtn.addEventListener('click', () => {
-            locationInput.value = '';
-            locationInput.focus();
+        // Sport modal
+        el.sportBtn.addEventListener('click', showSportModal);
+        el.closeSportBtn.addEventListener('click', hideSportModal);
+
+        document.querySelectorAll('.sport-card').forEach(card => {
+            card.addEventListener('click', () => selectSport(card.dataset.sport, card.dataset.icon));
         });
 
-        // Quote tap to regenerate
-        quoteContainer.addEventListener('click', () => {
-            if (!hasInteracted) {
-                hasInteracted = true;
-                quoteHint.classList.remove('visible');
-            }
-            generateQuote();
+        // Main screen
+        el.locationBtn.addEventListener('click', () => showLocationModal(false));
+        el.quoteContainer.addEventListener('click', generateQuote);
+
+        // Modal overlay
+        el.modalOverlay.addEventListener('click', () => {
+            hideSportModal();
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            if (!isOnboarding) hideLocationModal();
         });
 
-        // Show hint after delay
-        setTimeout(() => {
-            if (!hasInteracted) {
-                quoteHint.classList.add('visible');
-            }
-        }, 3000);
-
-        // Handle Enter key in location input
-        locationInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                selectLocation(locationInput.value);
-            }
-        });
-
-        // Keyboard shortcuts
+        // Keyboard
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeSportScreen();
-                closeLocationScreen();
+                hideSportModal();
+                const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+                if (!isOnboarding) hideLocationModal();
             }
         });
+
+        // ==================== INIT ====================
+        // Add ?reset to URL to clear onboarding and test again
+        if (window.location.search.includes('reset')) {
+            localStorage.removeItem('sportsguy_onboarded');
+            localStorage.removeItem('sportsguy_recent_locations');
+            hasCompletedOnboarding = false;
+            recentLocations = [];
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        function init() {
+            initializeSport();
+            
+            if (hasCompletedOnboarding && recentLocations.length > 0) {
+                currentLocation = recentLocations[0];
+                showScreen('main');
+                generateQuote();
+            } else {
+                // Always show onboarding if not completed or no location saved
+                hasCompletedOnboarding = false;
+                localStorage.removeItem('sportsguy_onboarded');
+                showScreen('onboarding1');
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
