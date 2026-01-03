@@ -200,9 +200,23 @@
 
         /* ==================== LOADING SCREEN ==================== */
         #loading-screen {
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
             overflow: hidden;
+        }
+
+        #loading-screen header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+        }
+
+        .loading-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
 
         .loading-gradient {
@@ -219,38 +233,33 @@
 
         .loading-gradient.visible {
             opacity: 1;
-            animation: gradientMorph 6s ease-in-out infinite;
+            animation: gradientMorph 8s ease-in-out infinite;
         }
 
         @keyframes gradientMorph {
             0% { 
-                transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
-                filter: hue-rotate(0deg) saturate(1) blur(0px);
-                border-radius: 50%;
+                transform: scale(0.9) rotate(0deg); 
+                filter: hue-rotate(0deg) saturate(1);
             }
-            15% { 
-                transform: scale(1.15) rotate(8deg) skew(2deg, 1deg); 
-                filter: hue-rotate(20deg) saturate(1.2) blur(2px);
+            20% { 
+                transform: scale(1.25) rotate(10deg); 
+                filter: hue-rotate(25deg) saturate(1.2);
             }
-            30% { 
-                transform: scale(0.9) rotate(-5deg) skew(-1deg, 2deg); 
-                filter: hue-rotate(-15deg) saturate(0.9) blur(1px);
+            40% { 
+                transform: scale(0.85) rotate(-8deg); 
+                filter: hue-rotate(-15deg) saturate(0.95);
             }
-            50% { 
-                transform: scale(1.1) rotate(3deg) skew(1deg, -1deg); 
-                filter: hue-rotate(25deg) saturate(1.15) blur(0px);
+            60% { 
+                transform: scale(1.2) rotate(5deg); 
+                filter: hue-rotate(20deg) saturate(1.15);
             }
-            70% { 
-                transform: scale(0.95) rotate(-8deg) skew(-2deg, 1deg); 
-                filter: hue-rotate(-10deg) saturate(1.1) blur(2px);
-            }
-            85% { 
-                transform: scale(1.12) rotate(5deg) skew(1deg, 2deg); 
-                filter: hue-rotate(15deg) saturate(1) blur(1px);
+            80% { 
+                transform: scale(0.95) rotate(-5deg); 
+                filter: hue-rotate(-10deg) saturate(1.05);
             }
             100% { 
-                transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
-                filter: hue-rotate(0deg) saturate(1) blur(0px);
+                transform: scale(0.9) rotate(0deg); 
+                filter: hue-rotate(0deg) saturate(1);
             }
         }
 
@@ -259,7 +268,7 @@
             width: 280px;
             height: 280px;
             opacity: 0;
-            transition: opacity 0.8s ease, transform 1.5s ease;
+            transition: opacity 0.8s ease, transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .loading-balls-container.visible {
@@ -277,7 +286,6 @@
             width: 56px;
             height: 56px;
             object-fit: contain;
-            transition: transform 0.3s ease;
         }
 
         /* Position balls in a circle */
@@ -289,33 +297,38 @@
         .loading-ball:nth-child(6) { top: 20%; left: 0; }
 
         @keyframes rotateBalls {
-            0% { transform: rotate(0deg) scale(0.85); }
-            10% { transform: rotate(20deg) scale(0.9); }
-            20% { transform: rotate(90deg) scale(1.1); }
-            30% { transform: rotate(140deg) scale(1.15); }
-            40% { transform: rotate(160deg) scale(1.0); }
-            50% { transform: rotate(180deg) scale(0.85); }
-            60% { transform: rotate(200deg) scale(0.9); }
-            70% { transform: rotate(270deg) scale(1.1); }
-            80% { transform: rotate(320deg) scale(1.15); }
-            90% { transform: rotate(345deg) scale(1.0); }
-            100% { transform: rotate(360deg) scale(0.85); }
+            0% { transform: rotate(0deg) scale(0.9); }
+            8% { transform: rotate(30deg) scale(0.95); }
+            15% { transform: rotate(80deg) scale(1.15); }
+            22% { transform: rotate(130deg) scale(1.2); }
+            30% { transform: rotate(160deg) scale(1.0); }
+            40% { transform: rotate(180deg) scale(0.9); }
+            48% { transform: rotate(210deg) scale(0.95); }
+            55% { transform: rotate(260deg) scale(1.15); }
+            62% { transform: rotate(310deg) scale(1.2); }
+            70% { transform: rotate(340deg) scale(1.0); }
+            85% { transform: rotate(355deg) scale(0.92); }
+            100% { transform: rotate(360deg) scale(0.9); }
         }
 
         .loading-balls-container.spinning {
-            animation: rotateBalls 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            animation: rotateBalls 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
         .loading-quote-text {
             position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
             font-family: 'Instrument Serif', Georgia, serif;
             font-size: 1rem;
             font-style: italic;
             color: var(--text-muted);
             text-align: center;
-            max-width: 200px;
+            width: 85%;
+            max-width: 320px;
             opacity: 0;
-            transition: opacity 0.8s ease;
+            transition: opacity 0.5s ease;
         }
 
         .loading-quote-text.visible {
@@ -448,6 +461,7 @@
             right: 0;
             bottom: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             background: var(--bg);
@@ -470,14 +484,14 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            animation: gradientMorph 6s ease-in-out infinite;
+            animation: gradientMorph 8s ease-in-out infinite;
         }
 
         .mini-loader-balls {
             position: relative;
             width: 200px;
             height: 200px;
-            transition: transform 0.6s ease, opacity 0.6s ease;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
         }
 
         .mini-loader-balls img {
@@ -495,7 +509,7 @@
         .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
 
         .mini-loader-balls.spinning {
-            animation: rotateBalls 3s ease-in-out infinite;
+            animation: rotateBalls 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
         .mini-loader-balls.explode {
@@ -506,7 +520,7 @@
 
         .mini-loader-text {
             position: absolute;
-            bottom: 25%;
+            bottom: 18%;
             left: 50%;
             transform: translateX(-50%);
             font-family: 'Instrument Serif', Georgia, serif;
@@ -514,8 +528,8 @@
             font-style: italic;
             color: var(--text-muted);
             text-align: center;
-            max-width: 250px;
-            white-space: nowrap;
+            width: 85%;
+            max-width: 300px;
             transition: opacity 0.3s ease;
         }
 
@@ -920,19 +934,29 @@
 
     <!-- Loading Screen -->
     <div id="loading-screen" class="screen">
-        <button class="location-hint-btn" style="pointer-events: none;" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        </button>
-        <div class="loading-gradient" id="loading-gradient"></div>
-        <div class="loading-balls-container" id="loading-balls">
-            <img class="loading-ball" src="icons/Basketball.png" alt="">
-            <img class="loading-ball" src="icons/Football.png" alt="">
-            <img class="loading-ball" src="icons/Tennis.png" alt="">
-            <img class="loading-ball" src="icons/Soccer.png" alt="">
-            <img class="loading-ball" src="icons/Golf.png" alt="">
-            <img class="loading-ball" src="icons/Baseball.png" alt="">
+        <header>
+            <button class="icon-btn" id="loading-sport-btn" aria-label="Choose sport" style="pointer-events: none;">
+                <img id="loading-sport-icon" src="icons/Basketball.png" alt="Sport">
+            </button>
+            <div class="logo">
+                <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
+            </div>
+            <button class="icon-btn" style="pointer-events: none;" aria-label="Location">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </button>
+        </header>
+        <div class="loading-content">
+            <div class="loading-gradient" id="loading-gradient"></div>
+            <div class="loading-balls-container" id="loading-balls">
+                <img class="loading-ball" src="icons/Basketball.png" alt="">
+                <img class="loading-ball" src="icons/Football.png" alt="">
+                <img class="loading-ball" src="icons/Tennis.png" alt="">
+                <img class="loading-ball" src="icons/Soccer.png" alt="">
+                <img class="loading-ball" src="icons/Golf.png" alt="">
+                <img class="loading-ball" src="icons/Baseball.png" alt="">
+            </div>
         </div>
-        <p class="loading-quote-text" id="loading-quote-text">"I think it's very important to have a balance. So I play a lot of sports—mostly the ones where you can wear a hat and sit down."<br><br>— Bill Murray</p>
+        <p class="loading-quote-text" id="loading-quote-text"></p>
     </div>
 
     <!-- Main Screen -->
@@ -1207,49 +1231,90 @@
                 "Reviewing that catch for the 1,000th time...",
                 "Texting Bill Belichick for insider info...",
                 "Watching all 22 camera angles now...",
+                "Arguing about who the GOAT quarterback is...",
+                "Analyzing the third-string left guard's footwork...",
+                "Checking if that was roughing the passer or not...",
+                "Rewinding that Hail Mary in slow motion...",
+                "Debating if they should've run the ball...",
+                "Looking up obscure tiebreaker rules...",
             ],
             basketball: [
                 "Analyzing Steph's shooting form frame by frame...",
                 "Checking if that was actually a travel...",
                 "Rewinding LeBron's postgame interview...",
                 "Counting how many times they said 'at the rim'...",
+                "Debating who deserves the MVP this year...",
+                "Watching that ankle-breaker crossover again...",
+                "Studying the pick-and-roll execution...",
+                "Checking the plus-minus stats obsessively...",
+                "Analyzing that poster dunk from every angle...",
+                "Reviewing the last two minutes report...",
             ],
             baseball: [
                 "Buying peanuts and cracker jacks...",
                 "Checking the spin rate on that curveball...",
                 "Reviewing the pitch sequence from the 7th...",
                 "Watching that diving catch one more time...",
+                "Analyzing launch angle and exit velocity...",
+                "Arguing about the designated hitter rule...",
+                "Checking if the shift should be banned...",
+                "Rewinding that bang-bang play at first...",
+                "Looking up obscure batting average stats...",
+                "Debating if that was a balk or not...",
             ],
             soccer: [
                 "Checking VAR from every possible angle...",
                 "Rewatching that offside call 50 times...",
                 "Analyzing the buildup to that goal...",
                 "Calculating expected goals like a nerd...",
+                "Debating if that was a dive or not...",
+                "Watching that bicycle kick on repeat...",
+                "Checking if the ball fully crossed the line...",
+                "Analyzing the goalkeeper's positioning...",
+                "Studying the formation and tactics...",
+                "Arguing about who's the best midfielder...",
             ],
             tennis: [
                 "Watching that Hawkeye replay again...",
                 "Analyzing the serve speed data...",
                 "Checking if that was really out...",
                 "Counting unforced errors like a maniac...",
+                "Studying the spin on that backhand...",
+                "Debating if clay or grass is better...",
+                "Watching that drop shot in slow-mo...",
+                "Checking the first serve percentage...",
+                "Analyzing the tiebreak point by point...",
+                "Rewinding that incredible rally...",
             ],
             golf: [
                 "Reading the green from satellite imagery...",
                 "Checking wind speed at the 14th hole...",
                 "Analyzing that swing in slow-mo...",
                 "Watching them line up that putt forever...",
+                "Calculating the break on this 30-footer...",
+                "Checking if that was a one-club or two-club wind...",
+                "Analyzing the divot pattern for clues...",
+                "Studying the course management strategy...",
+                "Watching that chip shot roll toward the cup...",
+                "Debating driver vs. 3-wood off the tee...",
             ],
             general: [
                 "Watching all the sports now...",
-                "Texting Joe Buck, Kevin Harlan, and Mike Tirico...",
+                "Texting Joe Buck for the inside scoop...",
                 "Checking the monitors...",
-                "Getting the insider scoop...",
+                "Getting the insider take...",
+                "Consulting the sports gods...",
+                "Running the numbers...",
+                "Asking the experts...",
+                "Reviewing the tape...",
+                "Crunching the stats...",
+                "Channeling our inner sports genius...",
             ]
         };
 
         function getRandomLoadingMessage(sport) {
             const sportMessages = loadingMessages[sport] || loadingMessages.general;
-            const allMessages = [...sportMessages, ...loadingMessages.general];
-            return allMessages[Math.floor(Math.random() * allMessages.length)];
+            return sportMessages[Math.floor(Math.random() * sportMessages.length)];
         }
 
         async function startLoadingSequence() {
@@ -1257,7 +1322,11 @@
             showScreen('onboarding3');
             await delay(1500);
 
-            // Transition to loading screen
+            // Transition to loading screen and update the sport icon
+            const loadingSportIcon = document.getElementById('loading-sport-icon');
+            if (loadingSportIcon) {
+                loadingSportIcon.src = currentIcon || 'icons/Basketball.png';
+            }
             showScreen('loading');
 
             // Start fetching quote in background
@@ -1270,14 +1339,14 @@
             // Show and spin balls with initial message
             await delay(800);
             el.loadingBalls.classList.add('visible', 'spinning');
-            el.loadingQuoteText.innerHTML = `"${getRandomLoadingMessage(currentSport)}"<br><br>— SportsGuy`;
+            el.loadingQuoteText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
             el.loadingQuoteText.classList.add('visible');
 
             // Cycle through messages while loading
             const messageInterval = setInterval(() => {
                 el.loadingQuoteText.style.opacity = '0';
                 setTimeout(() => {
-                    el.loadingQuoteText.innerHTML = `"${getRandomLoadingMessage(currentSport)}"<br><br>— SportsGuy`;
+                    el.loadingQuoteText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
                     el.loadingQuoteText.style.opacity = '1';
                 }, 400);
             }, 2500);
@@ -1407,7 +1476,7 @@
             
             const loader = document.getElementById('mini-loader');
             const loaderText = loader.querySelector('.mini-loader-text');
-            loaderText.innerHTML = `"${getRandomLoadingMessage(currentSport)}"`;
+            loaderText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
             
             loader.classList.add('visible');
             setTimeout(() => loader.querySelector('.mini-loader-balls').classList.add('spinning'), 100);
@@ -1416,7 +1485,7 @@
             miniLoaderMessageInterval = setInterval(() => {
                 loaderText.style.opacity = '0';
                 setTimeout(() => {
-                    loaderText.innerHTML = `"${getRandomLoadingMessage(currentSport)}"`;
+                    loaderText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
                     loaderText.style.opacity = '1';
                 }, 300);
             }, 2000);
