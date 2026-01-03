@@ -1046,16 +1046,28 @@
         // ==================== QUOTE GENERATION ====================
         async function fetchQuote() {
             try {
+                console.log('Fetching quote for:', { sport: currentSport, location: currentLocation });
+                
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sport: currentSport, location: currentLocation })
                 });
+                
+                console.log('Response status:', response.status);
+                
                 const data = await response.json();
-                if (data.error) throw new Error(data.error);
+                console.log('Response data:', data);
+                
+                if (data.error) {
+                    console.error('API Error:', data.error);
+                    throw new Error(data.error);
+                }
+                
                 return data.quote;
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Fetch error:', error);
+                // Return fallback with location info for debugging
                 return fallbackQuotes[currentSport] || fallbackQuotes.basketball;
             }
         }

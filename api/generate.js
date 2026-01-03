@@ -18,40 +18,37 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing sport or location' });
   }
 
-  // Map sport names to leagues for better search context
+  if (!process.env.CLAUDE_API_KEY) {
+    console.error('CLAUDE_API_KEY not set');
+    return res.status(500).json({ error: 'API key not configured' });
+  }
+
   const sportContext = {
-    basketball: 'NBA basketball',
-    football: 'NFL football',
-    baseball: 'MLB baseball',
-    soccer: 'MLS soccer or Premier League',
+    basketball: 'NBA',
+    football: 'NFL',
+    baseball: 'MLB',
+    soccer: 'MLS',
     tennis: 'ATP/WTA tennis',
-    golf: 'PGA golf'
+    golf: 'PGA Tour'
   };
 
   const sportLeague = sportContext[sport] || sport;
 
-  const systemPrompt = `You are a sports aficionado giving casual bar talk about ${sportLeague} for someone located in ${location}, USA.
+  const systemPrompt = `You give brief, punchy sports bar talk. Location: ${location}. Sport: ${sportLeague}.
 
-CRITICAL: The user is in ${location}. You MUST reference the LOCAL teams from that area. For example:
-- If they're in Boston, talk about the Celtics/Red Sox/Patriots/Bruins
-- If they're in LA, talk about the Lakers/Dodgers/Rams/Chargers
-- If they're in a smaller city, reference the nearest major market teams they'd follow
+RULES:
+1. Reference the LOCAL team for ${location} (e.g., NYC = Giants/Jets/Knicks/Yankees)
+2. Use web search to find what happened in the last few days
+3. Mention specific players, scores, or storylines
+4. Sound like a real fan - casual, opinionated
 
-Use the web search tool to find:
-1. The local ${sport} team(s) for ${location}
-2. Their most recent games, scores, and news from the past few days
-3. Key players, injuries, trades, or storylines
-
-Give a hyper-local, insider take about what's happening today/tonight or upcoming big games. Reference specific players, recent performances, injuries, trades — the kind of "if you know you know" commentary that would shock someone if they thought you didn't follow sports.
-
-Sound natural, like you're talking to a friend at a bar. Be conversational, use casual language.
-
-IMPORTANT OUTPUT FORMAT:
-- Start with a quote mark (")
-- Keep it to 2-3 sentences maximum
-- End with a quote mark (")
-- NO preamble, NO "Here's a take:", just the quote itself
-- Reference SPECIFIC recent events, player names, scores when possible`;
+FORMAT - CRITICAL:
+- Output ONLY the quote, nothing else
+- 2 sentences maximum
+- Start with " and end with "
+- NO preamble like "Let me search" or "Here's a take"
+- NO meta-commentary about searching
+- Just the bar talk quote itself`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -63,14 +60,15 @@ IMPORTANT OUTPUT FORMAT:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
+        max_tokens: 300,
         tools: [{
           type: 'web_search_20250305',
           name: 'web_search'
         }],
+        tool_choice: { type: 'auto' },
         messages: [{
           role: 'user',
-          content: `I'm at a bar in ${location} and want to sound like I know ${sport}. What's the insider take on the local team right now? Search for the latest news and give me something good to say.`
+          content: `Give me a quick ${sportLeague} take for ${location}. Search for recent news, then give me 2 sentences max.`
         }],
         system: systemPrompt
       })
@@ -80,7 +78,11 @@ IMPORTANT OUTPUT FORMAT:
 
     if (data.error) {
       console.error('Claude API error:', data.error);
-      return res.status(500).json({ error: 'Failed to generate take' });
+      return res.status(500).json({ error: 'API error: ' + data.error.message });
+    }
+
+    if (!data.content || data.content.length === 0) {
+      return res.status(500).json({ error: 'No content in response' });
     }
 
     // Extract text from response
@@ -91,17 +93,30 @@ IMPORTANT OUTPUT FORMAT:
       }
     }
 
-    // Clean up the quote
+    // Clean up the quote aggressively
     quote = quote.trim();
     
-    // Remove any preamble like "Here's a take:" or similar
-    quote = quote.replace(/^(Here's|Here is|Sure|Okay|Alright)[^"]*["]/i, '"');
+    // Remove any preamble/meta text before the actual quote
+    quote = quote.replace(/^.*?(Let me|I'll|I will|Searching|Looking)[^"]*["]/gi, '"');
+    quote = quote.replace(/^[^"]*["]/i, '"');
     
-    // Ensure it starts and ends with quotes
+    // If there's no quote mark, find the meat of the response
+    if (!quote.includes('"')) {
+      // Remove common preambles
+      quote = quote.replace(/^(Let me search|I'll search|Searching|Looking for|Here's)[^.]*\.\s*/gi, '');
+      quote = '"' + quote + '"';
+    }
+    
+    // Ensure proper quote marks
     if (!quote.startsWith('"')) {
       quote = '"' + quote;
     }
-    if (!quote.endsWith('"')) {
+    
+    // Find last quote and trim, or add one
+    const lastQuoteIndex = quote.lastIndexOf('"');
+    if (lastQuoteIndex > 0 && lastQuoteIndex < quote.length - 1) {
+      quote = quote.substring(0, lastQuoteIndex + 1);
+    } else if (!quote.endsWith('"')) {
       quote = quote + '"';
     }
 
@@ -109,6 +124,6 @@ IMPORTANT OUTPUT FORMAT:
 
   } catch (error) {
     console.error('Error:', error);
-    return res.status(500).json({ error: 'Failed to generate take' });
+    return res.status(500).json({ error: 'Failed to generate take: ' + error.message });
   }
 }
