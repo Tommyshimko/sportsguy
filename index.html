@@ -718,12 +718,12 @@
         </button>
         <div class="loading-gradient" id="loading-gradient"></div>
         <div class="loading-balls-container" id="loading-balls">
-            <img class="loading-ball" src="icons/basketball.png" alt="">
-            <img class="loading-ball" src="icons/football.png" alt="">
-            <img class="loading-ball" src="icons/tennis.png" alt="">
-            <img class="loading-ball" src="icons/soccer.png" alt="">
-            <img class="loading-ball" src="icons/golf.png" alt="">
-            <img class="loading-ball" src="icons/baseball.png" alt="">
+            <img class="loading-ball" src="icons/Basketball.png" alt="">
+            <img class="loading-ball" src="icons/Football.png" alt="">
+            <img class="loading-ball" src="icons/Tennis.png" alt="">
+            <img class="loading-ball" src="icons/Soccer.png" alt="">
+            <img class="loading-ball" src="icons/Golf.png" alt="">
+            <img class="loading-ball" src="icons/Baseball.png" alt="">
         </div>
         <p class="loading-quote-text" id="loading-quote-text">"It's hard to beat someone who never gives up."</p>
     </div>
@@ -732,7 +732,7 @@
     <div id="main-screen" class="screen">
         <header>
             <button class="icon-btn" id="sport-btn" aria-label="Choose sport">
-                <img id="current-sport-icon" src="icons/basketball.png" alt="Sport">
+                <img id="current-sport-icon" src="icons/Basketball.png" alt="Sport">
             </button>
             <div class="logo">
                 <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
@@ -760,28 +760,28 @@
             </div>
         </header>
         <div class="sport-grid">
-            <button class="sport-card" data-sport="baseball" data-icon="icons/baseball.png">
-                <img class="sport-icon" src="icons/baseball.png" alt="Baseball">
+            <button class="sport-card" data-sport="baseball" data-icon="icons/Baseball.png">
+                <img class="sport-icon" src="icons/Baseball.png" alt="Baseball">
                 <span class="sport-name">Baseball</span>
             </button>
-            <button class="sport-card" data-sport="basketball" data-icon="icons/basketball.png">
-                <img class="sport-icon" src="icons/basketball.png" alt="Basketball">
+            <button class="sport-card" data-sport="basketball" data-icon="icons/Basketball.png">
+                <img class="sport-icon" src="icons/Basketball.png" alt="Basketball">
                 <span class="sport-name">Basketball</span>
             </button>
-            <button class="sport-card" data-sport="golf" data-icon="icons/golf.png">
-                <img class="sport-icon" src="icons/golf.png" alt="Golf">
+            <button class="sport-card" data-sport="golf" data-icon="icons/Golf.png">
+                <img class="sport-icon" src="icons/Golf.png" alt="Golf">
                 <span class="sport-name">Golf</span>
             </button>
-            <button class="sport-card" data-sport="tennis" data-icon="icons/tennis.png">
-                <img class="sport-icon" src="icons/tennis.png" alt="Tennis">
+            <button class="sport-card" data-sport="tennis" data-icon="icons/Tennis.png">
+                <img class="sport-icon" src="icons/Tennis.png" alt="Tennis">
                 <span class="sport-name">Tennis</span>
             </button>
-            <button class="sport-card" data-sport="soccer" data-icon="icons/soccer.png">
-                <img class="sport-icon" src="icons/soccer.png" alt="Soccer">
+            <button class="sport-card" data-sport="soccer" data-icon="icons/Soccer.png">
+                <img class="sport-icon" src="icons/Soccer.png" alt="Soccer">
                 <span class="sport-name">Soccer</span>
             </button>
-            <button class="sport-card" data-sport="football" data-icon="icons/football.png">
-                <img class="sport-icon" src="icons/football.png" alt="Football">
+            <button class="sport-card" data-sport="football" data-icon="icons/Football.png">
+                <img class="sport-icon" src="icons/Football.png" alt="Football">
                 <span class="sport-name">Football</span>
             </button>
         </div>
@@ -890,9 +890,9 @@
         // ==================== SEASONAL SPORT ====================
         function getSeasonalSport() {
             const month = new Date().getMonth();
-            if (month >= 8 || month <= 1) return { sport: 'football', icon: 'icons/football.png' };
-            if (month >= 2 && month <= 5) return { sport: 'basketball', icon: 'icons/basketball.png' };
-            return { sport: 'baseball', icon: 'icons/baseball.png' };
+            if (month >= 8 || month <= 1) return { sport: 'football', icon: 'icons/Football.png' };
+            if (month >= 2 && month <= 5) return { sport: 'basketball', icon: 'icons/Basketball.png' };
+            return { sport: 'baseball', icon: 'icons/Baseball.png' };
         }
 
         function initializeSport() {
