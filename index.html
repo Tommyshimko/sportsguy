@@ -252,12 +252,15 @@
         .loading-ball:nth-child(6) { top: 20%; left: 0; } /* baseball - top left */
 
         @keyframes rotateBalls {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg) scale(0.85); }
+            25% { transform: rotate(90deg) scale(1.1); }
+            50% { transform: rotate(180deg) scale(0.85); }
+            75% { transform: rotate(270deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(0.85); }
         }
 
         .loading-balls-container.spinning {
-            animation: rotateBalls 8s linear infinite;
+            animation: rotateBalls 3s ease-in-out infinite;
         }
 
         .loading-quote-text {
@@ -448,7 +451,7 @@
         .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
 
         .mini-loader-balls.spinning {
-            animation: rotateBalls 4s linear infinite;
+            animation: rotateBalls 3s ease-in-out infinite;
         }
 
         .mini-loader-balls.explode {
@@ -1135,13 +1138,23 @@
             try {
                 console.log('Fetching quote for:', { sport: currentSport, location: currentLocation });
                 
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sport: currentSport, location: currentLocation })
+                    body: JSON.stringify({ sport: currentSport, location: currentLocation }),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
                 console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
                 const data = await response.json();
                 console.log('Response data:', data);
@@ -1331,21 +1344,41 @@
         }
 
         function init() {
-            initializeSport();
-            
-            if (hasCompletedOnboarding && recentLocations.length > 0) {
-                currentLocation = recentLocations[0];
-                showScreen('main');
-                generateQuote();
-            } else {
-                // Always show onboarding if not completed or no location saved
-                hasCompletedOnboarding = false;
+            try {
+                initializeSport();
+                
+                // Check if we have valid saved state
+                const hasValidState = hasCompletedOnboarding && 
+                                      recentLocations.length > 0 && 
+                                      recentLocations[0] && 
+                                      recentLocations[0].trim() !== '';
+                
+                if (hasValidState) {
+                    currentLocation = recentLocations[0];
+                    showScreen('main');
+                    // Small delay to ensure DOM is ready
+                    setTimeout(() => generateQuote(), 100);
+                } else {
+                    // Reset and show onboarding
+                    hasCompletedOnboarding = false;
+                    localStorage.removeItem('sportsguy_onboarded');
+                    showScreen('onboarding1');
+                }
+            } catch (error) {
+                console.error('Init error:', error);
+                // On any error, reset to clean state
                 localStorage.removeItem('sportsguy_onboarded');
+                localStorage.removeItem('sportsguy_recent_locations');
                 showScreen('onboarding1');
             }
         }
 
-        init();
+        // Wait for DOM to be fully ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
     
     <!-- Vercel Web Analytics -->
