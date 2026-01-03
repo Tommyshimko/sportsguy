@@ -183,8 +183,8 @@
         /* Arrow pointing to location - using PNG image */
         .arrow-container {
             position: absolute;
-            top: 100px;
-            right: 80px;
+            top: 68px;
+            right: 72px;
             width: 100px;
             height: 160px;
         }
@@ -1167,7 +1167,15 @@
                 return data.quote;
             } catch (error) {
                 console.error('Fetch error:', error);
-                // Return fallback with location info for debugging
+                // Show error in console with details
+                console.error('Failed for:', { sport: currentSport, location: currentLocation });
+                
+                // Return error message so user knows something went wrong
+                if (error.name === 'AbortError') {
+                    return `"Sorry, that took too long. Tap to try again!"`;
+                }
+                
+                // Return fallback quote
                 return fallbackQuotes[currentSport] || fallbackQuotes.basketball;
             }
         }
@@ -1261,15 +1269,89 @@
         // Location modal
         el.useCurrentLocation.addEventListener('click', detectCurrentLocation);
         
+        // Debounce timer for autocomplete
+        let autocompleteTimer = null;
+        
         el.locationInput.addEventListener('input', (e) => {
-            const hasValue = e.target.value.length > 0;
+            const value = e.target.value;
+            const hasValue = value.length > 0;
             el.clearLocationBtn.classList.toggle('visible', hasValue);
             el.confirmLocationBtn.disabled = !hasValue;
+            
+            // Clear previous timer
+            if (autocompleteTimer) clearTimeout(autocompleteTimer);
+            
+            // Autocomplete after 500ms of no typing
+            if (value.length >= 3) {
+                autocompleteTimer = setTimeout(() => lookupLocation(value), 500);
+            }
         });
+
+        // Lookup location (handles zip codes and city names)
+        async function lookupLocation(query) {
+            try {
+                // Check if it's a zip code (5 digits)
+                const isZipCode = /^\d{5}$/.test(query.trim());
+                
+                if (isZipCode) {
+                    // Use Zippopotam.us for zip code lookup (free, no API key)
+                    const response = await fetch(`https://api.zippopotam.us/us/${query.trim()}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const place = data.places[0];
+                        const cityState = `${place['place name']}, ${place['state abbreviation']}`;
+                        
+                        // Show as suggestion
+                        showAutocompleteSuggestions([cityState]);
+                    }
+                } else {
+                    // For city names, use a simple approach - show what they typed
+                    // In a production app, you'd use Google Places API here
+                    showAutocompleteSuggestions([]);
+                }
+            } catch (error) {
+                console.log('Location lookup error:', error);
+            }
+        }
+        
+        function showAutocompleteSuggestions(suggestions) {
+            // Clear current suggestions (keep recent)
+            const existingItems = el.locationSuggestions.querySelectorAll('.autocomplete-item');
+            existingItems.forEach(item => item.remove());
+            
+            // Add autocomplete header if we have suggestions
+            let autocompleteHeader = document.getElementById('autocomplete-header');
+            if (suggestions.length > 0) {
+                if (!autocompleteHeader) {
+                    autocompleteHeader = document.createElement('div');
+                    autocompleteHeader.id = 'autocomplete-header';
+                    autocompleteHeader.className = 'recent-header';
+                    autocompleteHeader.textContent = 'Did you mean';
+                    autocompleteHeader.style.marginTop = '16px';
+                    el.locationSuggestions.parentNode.insertBefore(autocompleteHeader, el.locationSuggestions);
+                }
+                autocompleteHeader.style.display = 'block';
+                
+                suggestions.forEach(suggestion => {
+                    const li = document.createElement('li');
+                    li.className = 'location-item autocomplete-item';
+                    li.textContent = suggestion;
+                    li.addEventListener('click', () => {
+                        el.locationInput.value = suggestion;
+                        el.confirmLocationBtn.disabled = false;
+                        showAutocompleteSuggestions([]); // Clear suggestions
+                    });
+                    // Insert at top of list
+                    el.locationSuggestions.insertBefore(li, el.locationSuggestions.firstChild);
+                });
+            } else if (autocompleteHeader) {
+                autocompleteHeader.style.display = 'none';
+            }
+        }
 
         el.locationInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && e.target.value) {
-                selectLocation(e.target.value);
+                handleLocationSubmit(e.target.value);
             }
         });
 
@@ -1288,8 +1370,29 @@
 
         el.confirmLocationBtn.addEventListener('click', () => {
             const location = el.locationInput.value.trim();
-            if (location) selectLocation(location);
+            if (location) handleLocationSubmit(location);
         });
+        
+        // Handle location submission - convert zip if needed
+        async function handleLocationSubmit(input) {
+            let location = input.trim();
+            
+            // If it's a zip code, convert to city name first
+            if (/^\d{5}$/.test(location)) {
+                try {
+                    const response = await fetch(`https://api.zippopotam.us/us/${location}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const place = data.places[0];
+                        location = `${place['place name']}, ${place['state abbreviation']}`;
+                    }
+                } catch (error) {
+                    console.log('Zip lookup failed, using as-is');
+                }
+            }
+            
+            selectLocation(location);
+        }
 
         el.closeLocationBtn.addEventListener('click', () => {
             const isOnboarding = screens.location.dataset.isOnboarding === 'true';
