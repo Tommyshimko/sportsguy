@@ -246,19 +246,13 @@
 
         @keyframes gradientMorph {
             0% { 
-                transform: scale(0.5); 
-            }
-            25% { 
-                transform: scale(1.2); 
+                transform: scale(1.3); 
             }
             50% { 
-                transform: scale(2.5); 
-            }
-            75% { 
-                transform: scale(1.2); 
+                transform: scale(3); 
             }
             100% { 
-                transform: scale(0.5); 
+                transform: scale(1.3); 
             }
         }
 
@@ -299,19 +293,13 @@
 
         @keyframes rotateBalls {
             0% { 
-                transform: rotate(0deg) scale(0.75); 
-            }
-            25% { 
-                transform: rotate(90deg) scale(0.9); 
+                transform: rotate(0deg) scale(0.8); 
             }
             50% { 
-                transform: rotate(900deg) scale(1.15); 
-            }
-            75% { 
-                transform: rotate(1710deg) scale(0.9); 
+                transform: rotate(1800deg) scale(1.2); 
             }
             100% { 
-                transform: rotate(1800deg) scale(0.75); 
+                transform: rotate(3600deg) scale(0.8); 
             }
         }
 
@@ -394,6 +382,12 @@
             font-weight: 400;
             letter-spacing: 0.02em;
             text-transform: uppercase;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .logo-text {
+            display: inline-block;
         }
 
         .text-green { color: var(--green); }
@@ -551,17 +545,19 @@
         /* ==================== SPORT MODAL ==================== */
         #sport-screen {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(250, 249, 246, 0.92);
+            top: 80px; left: 0; right: 0; bottom: 0;
+            background: rgba(250, 249, 246, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 101;
             transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
         }
 
         #sport-screen.active {
             transform: translateY(0);
+            opacity: 1;
         }
 
         .modal-header {
@@ -586,7 +582,7 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
-            padding: 20px 24px;
+            padding: 24px;
         }
 
         .sport-card {
@@ -644,11 +640,13 @@
             background: var(--bg);
             z-index: 101;
             transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
         }
 
         #location-screen.active {
             transform: translateY(0);
+            opacity: 1;
         }
 
         .location-content {
@@ -979,8 +977,8 @@
             <button class="icon-btn" id="sport-btn" aria-label="Choose sport">
                 <img id="current-sport-icon" src="icons/Basketball.png" alt="Sport">
             </button>
-            <div class="logo">
-                <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
+            <div class="logo" id="main-logo">
+                <span id="logo-text" class="logo-text"><span class="text-green">SPORTS</span><span class="text-blue">GUY</span></span>
             </div>
             <button class="icon-btn" id="location-btn" aria-label="Set location">
                 <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -996,14 +994,6 @@
 
     <!-- Sport Selection Modal -->
     <div id="sport-screen" class="screen">
-        <header class="modal-header">
-            <button class="icon-btn" id="close-sport-btn" aria-label="Close">
-                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-            <div class="modal-title">
-                <span class="text-green">CHOOSE</span> <span class="text-blue">SPORT</span>
-            </div>
-        </header>
         <div class="sport-grid">
             <button class="sport-card" data-sport="baseball" data-icon="icons/Baseball.png">
                 <img class="sport-icon" src="icons/Baseball.png" alt="Baseball">
@@ -1075,6 +1065,61 @@
         let hasCompletedOnboarding = localStorage.getItem('sportsguy_onboarded') === 'true';
         let recentLocations = JSON.parse(localStorage.getItem('sportsguy_recent_locations') || '[]');
         let pendingQuote = '';
+
+        // ==================== TEXT SCRAMBLE CLASS ====================
+        class TextScramble {
+            constructor(el) {
+                this.el = el;
+                this.chars = '!<>-_\\/[]{}—=+*^?#________';
+                this.update = this.update.bind(this);
+            }
+            setText(newText) {
+                const oldText = this.el.innerText;
+                const length = Math.max(oldText.length, newText.length);
+                const promise = new Promise((resolve) => this.resolve = resolve);
+                this.queue = [];
+                for (let i = 0; i < length; i++) {
+                    const from = oldText[i] || '';
+                    const to = newText[i] || '';
+                    const start = Math.floor(Math.random() * 20);
+                    const end = start + Math.floor(Math.random() * 20);
+                    this.queue.push({ from, to, start, end });
+                }
+                cancelAnimationFrame(this.frameRequest);
+                this.frame = 0;
+                this.update();
+                return promise;
+            }
+            update() {
+                let output = '';
+                let complete = 0;
+                for (let i = 0, n = this.queue.length; i < n; i++) {
+                    let { from, to, start, end, char } = this.queue[i];
+                    if (this.frame >= end) {
+                        complete++;
+                        output += to;
+                    } else if (this.frame >= start) {
+                        if (!char || Math.random() < 0.28) {
+                            char = this.randomChar();
+                            this.queue[i].char = char;
+                        }
+                        output += `<span style="opacity: 0.4;">${char}</span>`;
+                    } else {
+                        output += from;
+                    }
+                }
+                this.el.innerHTML = output;
+                if (complete === this.queue.length) {
+                    this.resolve();
+                } else {
+                    this.frameRequest = requestAnimationFrame(this.update);
+                    this.frame++;
+                }
+            }
+            randomChar() {
+                return this.chars[Math.floor(Math.random() * this.chars.length)];
+            }
+        }
 
         // ==================== DOM ELEMENTS ====================
         const $ = id => document.getElementById(id);
@@ -1159,11 +1204,35 @@
             el.clearLocationBtn.classList.remove('visible');
             el.confirmLocationBtn.textContent = isOnboarding ? 'Continue' : 'Set Location';
             updateLocationSuggestions();
+            
+            // Blur the quote content if not onboarding
+            if (!isOnboarding && el.quoteContainer) {
+                el.quoteContainer.classList.add('blurred');
+            }
+            
+            // Scramble logo text to "LOCATION"
+            const logoText = document.getElementById('logo-text');
+            if (logoText && !logoScramble) {
+                logoScramble = new TextScramble(logoText);
+            }
+            if (logoScramble && !isOnboarding) {
+                logoScramble.setText('LOCATION');
+            }
         }
 
         function hideLocationModal() {
             screens.location.classList.remove('active');
             el.modalOverlay.classList.remove('active');
+            
+            // Unblur the quote content
+            if (el.quoteContainer) {
+                el.quoteContainer.classList.remove('blurred');
+            }
+            
+            // Scramble back to "SPORTSGUY"
+            if (logoScramble) {
+                logoScramble.setText('SPORTSGUY');
+            }
         }
 
         function detectCurrentLocation() {
@@ -1522,11 +1591,23 @@
         }
 
         // ==================== SPORT SELECTION ====================
+        // Text scramble instance for logo
+        let logoScramble = null;
+
         function showSportModal() {
             screens.sport.classList.add('active');
             el.modalOverlay.classList.add('active');
             // Blur the quote content
             el.quoteContainer.classList.add('blurred');
+            
+            // Scramble logo text to "CHOOSE SPORT"
+            const logoText = document.getElementById('logo-text');
+            if (logoText && !logoScramble) {
+                logoScramble = new TextScramble(logoText);
+            }
+            if (logoScramble) {
+                logoScramble.setText('CHOOSE SPORT');
+            }
         }
 
         function hideSportModal() {
@@ -1534,6 +1615,11 @@
             el.modalOverlay.classList.remove('active');
             // Unblur the quote content
             el.quoteContainer.classList.remove('blurred');
+            
+            // Scramble back to "SPORTSGUY"
+            if (logoScramble) {
+                logoScramble.setText('SPORTSGUY');
+            }
         }
 
         function selectSport(sport, icon) {
@@ -1701,7 +1787,10 @@
 
         // Sport modal
         el.sportBtn.addEventListener('click', showSportModal);
-        el.closeSportBtn.addEventListener('click', hideSportModal);
+        // Clicking on the sport screen background closes it
+        screens.sport.addEventListener('click', (e) => {
+            if (e.target === screens.sport) hideSportModal();
+        });
 
         document.querySelectorAll('.sport-card').forEach(card => {
             card.addEventListener('click', () => selectSport(card.dataset.sport, card.dataset.icon));
