@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SportsGuy</title>
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Instrument Serif + Anton -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -31,7 +31,7 @@
         }
 
         body {
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Anton', sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
@@ -71,7 +71,7 @@
             cursor: pointer;
             box-shadow: var(--shadow);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            font-size: 1.5rem;
+            overflow: hidden;
         }
 
         .icon-btn:hover {
@@ -83,6 +83,12 @@
             transform: scale(0.98);
         }
 
+        .icon-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
         .icon-btn svg {
             width: 22px;
             height: 22px;
@@ -90,9 +96,11 @@
         }
 
         .logo {
+            font-family: 'Anton', sans-serif;
             font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.01em;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
 
         .text-green {
@@ -122,7 +130,7 @@
         }
 
         .quote {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: 'Instrument Serif', Georgia, serif;
             font-size: clamp(1.5rem, 6vw, 2rem);
             font-weight: 400;
             font-style: italic;
@@ -133,7 +141,9 @@
         .quote-hint {
             text-align: center;
             margin-top: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 0.875rem;
+            font-weight: 400;
             color: var(--text-muted);
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -190,8 +200,11 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
+            font-family: 'Anton', sans-serif;
             font-size: 1.25rem;
-            font-weight: 700;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
 
         .sport-grid {
@@ -228,14 +241,16 @@
             box-shadow: 0 0 0 2px var(--green), var(--shadow-lg);
         }
 
-        .sport-emoji {
-            font-size: 3rem;
+        .sport-icon {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
         }
 
         .sport-name {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: 'Instrument Serif', Georgia, serif;
             font-size: 1.125rem;
-            font-weight: 500;
+            font-weight: 400;
             color: var(--text);
         }
 
@@ -282,7 +297,7 @@
             flex: 1;
             border: none;
             background: none;
-            font-family: inherit;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 1rem;
             color: var(--text);
             outline: none;
@@ -315,7 +330,7 @@
             border: none;
             padding: 8px 16px;
             border-radius: 20px;
-            font-family: inherit;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 0.9rem;
             font-weight: 500;
             color: var(--green);
@@ -343,6 +358,10 @@
             margin-top: 2px;
         }
 
+        .current-location-text {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
         .current-location-text h3 {
             font-size: 1rem;
             font-weight: 500;
@@ -361,6 +380,7 @@
 
         .location-list {
             list-style: none;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         .location-item {
@@ -381,16 +401,13 @@
 
         /* Loading state */
         .loading .quote {
-            opacity: 0.3;
+            opacity: 0.5;
+            animation: pulse 1.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.6; }
-        }
-
-        .loading .quote {
-            animation: pulse 1.5s ease-in-out infinite;
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.7; }
         }
 
         /* Animations */
@@ -409,7 +426,7 @@
     <div id="main-screen" class="screen active">
         <header>
             <button class="icon-btn" id="sport-btn" aria-label="Choose sport">
-                <span id="current-sport-emoji">🏀</span>
+                <img id="current-sport-icon" src="icons/basketball.png" alt="Basketball">
             </button>
             <div class="logo">
                 <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
@@ -439,28 +456,28 @@
         </header>
         
         <div class="sport-grid">
-            <button class="sport-card" data-sport="baseball" data-emoji="⚾">
-                <span class="sport-emoji">⚾</span>
+            <button class="sport-card" data-sport="baseball" data-icon="icons/baseball.png">
+                <img class="sport-icon" src="icons/baseball.png" alt="Baseball">
                 <span class="sport-name">Baseball</span>
             </button>
-            <button class="sport-card selected" data-sport="basketball" data-emoji="🏀">
-                <span class="sport-emoji">🏀</span>
+            <button class="sport-card selected" data-sport="basketball" data-icon="icons/basketball.png">
+                <img class="sport-icon" src="icons/basketball.png" alt="Basketball">
                 <span class="sport-name">Basketball</span>
             </button>
-            <button class="sport-card" data-sport="golf" data-emoji="⛳">
-                <span class="sport-emoji">⛳</span>
+            <button class="sport-card" data-sport="golf" data-icon="icons/golf.png">
+                <img class="sport-icon" src="icons/golf.png" alt="Golf">
                 <span class="sport-name">Golf</span>
             </button>
-            <button class="sport-card" data-sport="tennis" data-emoji="🎾">
-                <span class="sport-emoji">🎾</span>
+            <button class="sport-card" data-sport="tennis" data-icon="icons/tennis.png">
+                <img class="sport-icon" src="icons/tennis.png" alt="Tennis">
                 <span class="sport-name">Tennis</span>
             </button>
-            <button class="sport-card" data-sport="soccer" data-emoji="⚽">
-                <span class="sport-emoji">⚽</span>
+            <button class="sport-card" data-sport="soccer" data-icon="icons/soccer.png">
+                <img class="sport-icon" src="icons/soccer.png" alt="Soccer">
                 <span class="sport-name">Soccer</span>
             </button>
-            <button class="sport-card" data-sport="football" data-emoji="🏈">
-                <span class="sport-emoji">🏈</span>
+            <button class="sport-card" data-sport="football" data-icon="icons/football.png">
+                <img class="sport-icon" src="icons/football.png" alt="Football">
                 <span class="sport-name">Football</span>
             </button>
         </div>
@@ -511,7 +528,7 @@
     <script>
         // State
         let currentSport = 'basketball';
-        let currentEmoji = '🏀';
+        let currentIcon = 'icons/basketball.png';
         let currentLocation = 'Brooklyn, NY';
         let hasInteracted = false;
 
@@ -527,7 +544,7 @@
         const closeLocationBtn = document.getElementById('close-location-btn');
         const cancelLocationBtn = document.getElementById('cancel-location');
         
-        const currentSportEmoji = document.getElementById('current-sport-emoji');
+        const currentSportIcon = document.getElementById('current-sport-icon');
         const quoteContainer = document.getElementById('quote-container');
         const quoteText = document.getElementById('quote-text');
         const quoteHint = document.getElementById('quote-hint');
@@ -536,38 +553,14 @@
         const clearLocationBtn = document.getElementById('clear-location');
         const locationSuggestions = document.getElementById('location-suggestions');
 
-        // Sample quotes by sport (placeholder - will be replaced with API later)
-        const quotes = {
-            basketball: [
-                `"Man, that Knicks-Pacers series was brutal. You could just see how gassed they were by Game 6—Brunson gave everything, and losing OG killed their defense. Still, this team's finally got an identity. Add one more star and they're a real contender."`,
-                `"The thing about the Warriors is they've been playing chess while everyone else plays checkers. Curry's gravity alone opens up so much for the offense."`,
-                `"I'm telling you, the Celtics defense this year is suffocating. When they switch everything, good luck finding any open looks."`,
-            ],
-            baseball: [
-                `"You know what I love about this Yankees lineup? Top to bottom, there's no easy out. Judge gets all the attention, but the depth is what wins in October."`,
-                `"The shift ban changed everything. Suddenly those pull hitters who were hitting .220 are back to being dangerous."`,
-                `"Ohtani's just built different. We're watching a generational talent, and people don't even realize how special this is."`,
-            ],
-            football: [
-                `"The NFL's all about the trenches. You can have the best quarterback in the league, but if your O-line can't hold for 3 seconds, none of it matters."`,
-                `"What Mahomes does when the play breaks down... you just can't coach that. It's pure instinct and arm talent."`,
-                `"Everyone sleeps on special teams until it costs you a playoff game. That's when you remember the little things matter."`,
-            ],
-            soccer: [
-                `"The beautiful game is all about controlling the midfield. You win there, you dictate the entire tempo of the match."`,
-                `"What Messi does in tight spaces shouldn't be physically possible. His center of gravity is just unfair."`,
-                `"People forget how tactical modern football has become. The pressing systems now are like chess matches."`,
-            ],
-            golf: [
-                `"The mental game in golf is everything. You can stripe it all day on the range, but can you do it with the tournament on the line?"`,
-                `"These young guys are hitting it so far now, courses have to add 500 yards just to stay competitive."`,
-                `"Augusta's greens are a different beast. You can hit a perfect shot and still end up 40 feet away."`,
-            ],
-            tennis: [
-                `"What separates the greats is their second serve. Anyone can hit a big first serve, but that second one under pressure? That's where matches are won."`,
-                `"The way Sinner moves on hard courts is just effortless. He's always in position before you even realize it."`,
-                `"Five-set matches are as much about fitness as talent. You see the cream rise after hour three."`,
-            ],
+        // Fallback quotes in case API fails
+        const fallbackQuotes = {
+            basketball: `"Man, the league is wild right now. Every night there's a new highlight reel play. You gotta stay locked in just to keep up with all the storylines."`,
+            baseball: `"This season's been something else. The young talent coming up is unreal—these kids are playing with no fear."`,
+            football: `"The parity in the league this year is crazy. Any given Sunday isn't just a saying anymore, it's the reality."`,
+            soccer: `"The tactical evolution we're seeing is next level. These managers are playing 4D chess out there."`,
+            golf: `"The depth on tour right now is insane. You can't take a week off or you'll drop 20 spots in the rankings."`,
+            tennis: `"The changing of the guard is finally here. New generation is taking over and they're not giving it back."`,
         };
 
         // Functions
@@ -592,10 +585,10 @@
             modalOverlay.classList.remove('active');
         }
 
-        function selectSport(sport, emoji) {
+        function selectSport(sport, icon) {
             currentSport = sport;
-            currentEmoji = emoji;
-            currentSportEmoji.textContent = emoji;
+            currentIcon = icon;
+            currentSportIcon.src = icon;
             
             // Update selected state
             document.querySelectorAll('.sport-card').forEach(card => {
@@ -617,23 +610,44 @@
             generateQuote();
         }
 
-        function generateQuote() {
-            const sportQuotes = quotes[currentSport] || quotes.basketball;
-            const randomQuote = sportQuotes[Math.floor(Math.random() * sportQuotes.length)];
-            
+        async function generateQuote() {
             // Add loading state
             quoteContainer.classList.add('loading');
+            quoteText.textContent = 'Getting the latest take...';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sport: currentSport,
+                        location: currentLocation
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                quoteText.textContent = data.quote;
+
+            } catch (error) {
+                console.error('Error generating quote:', error);
+                // Use fallback quote on error
+                const fallback = fallbackQuotes[currentSport] || fallbackQuotes.basketball;
+                quoteText.textContent = fallback;
+            }
+
+            quoteContainer.classList.remove('loading');
             
-            // Simulate API delay
-            setTimeout(() => {
-                quoteText.textContent = randomQuote;
-                quoteContainer.classList.remove('loading');
-                
-                // Trigger animation
-                quoteContainer.style.animation = 'none';
-                quoteContainer.offsetHeight; // Trigger reflow
-                quoteContainer.style.animation = 'fadeIn 0.5s ease-out';
-            }, 300);
+            // Trigger animation
+            quoteContainer.style.animation = 'none';
+            quoteContainer.offsetHeight; // Trigger reflow
+            quoteContainer.style.animation = 'fadeIn 0.5s ease-out';
         }
 
         // Event Listeners
@@ -650,7 +664,7 @@
         // Sport selection
         document.querySelectorAll('.sport-card').forEach(card => {
             card.addEventListener('click', () => {
-                selectSport(card.dataset.sport, card.dataset.emoji);
+                selectSport(card.dataset.sport, card.dataset.icon);
             });
         });
 
