@@ -209,6 +209,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
+            position: relative;
+            z-index: 10;
+            background: var(--bg);
         }
 
         .loading-content {
@@ -233,32 +236,20 @@
 
         .loading-gradient.visible {
             opacity: 1;
-            animation: gradientMorph 8s ease-in-out infinite;
+            animation: gradientMorph 6s ease-in-out infinite;
         }
 
         @keyframes gradientMorph {
             0% { 
-                transform: scale(0.9) rotate(0deg); 
+                transform: scale(0.95); 
                 filter: hue-rotate(0deg) saturate(1);
             }
-            20% { 
-                transform: scale(1.25) rotate(10deg); 
-                filter: hue-rotate(25deg) saturate(1.2);
-            }
-            40% { 
-                transform: scale(0.85) rotate(-8deg); 
-                filter: hue-rotate(-15deg) saturate(0.95);
-            }
-            60% { 
-                transform: scale(1.2) rotate(5deg); 
-                filter: hue-rotate(20deg) saturate(1.15);
-            }
-            80% { 
-                transform: scale(0.95) rotate(-5deg); 
-                filter: hue-rotate(-10deg) saturate(1.05);
+            50% { 
+                transform: scale(1.15); 
+                filter: hue-rotate(15deg) saturate(1.1);
             }
             100% { 
-                transform: scale(0.9) rotate(0deg); 
+                transform: scale(0.95); 
                 filter: hue-rotate(0deg) saturate(1);
             }
         }
@@ -297,17 +288,50 @@
         .loading-ball:nth-child(6) { top: 20%; left: 0; }
 
         @keyframes rotateBalls {
-            0% { transform: rotate(0deg) scale(0.9); }
-            100% { transform: rotate(360deg) scale(0.9); }
-        }
-
-        @keyframes ballPulse {
-            0%, 100% { transform: scale(0.9); }
-            50% { transform: scale(1.15); }
+            0% { 
+                transform: rotate(0deg) scale(0.95); 
+                filter: blur(0px);
+            }
+            10% { 
+                transform: rotate(60deg) scale(1.0); 
+                filter: blur(1px);
+            }
+            20% { 
+                transform: rotate(180deg) scale(1.1); 
+                filter: blur(2px);
+            }
+            30% { 
+                transform: rotate(220deg) scale(1.05); 
+                filter: blur(1px);
+            }
+            50% { 
+                transform: rotate(240deg) scale(0.95); 
+                filter: blur(0px);
+            }
+            60% { 
+                transform: rotate(260deg) scale(1.0); 
+                filter: blur(0px);
+            }
+            70% { 
+                transform: rotate(300deg) scale(1.05); 
+                filter: blur(1px);
+            }
+            80% { 
+                transform: rotate(350deg) scale(1.1); 
+                filter: blur(2px);
+            }
+            90% { 
+                transform: rotate(358deg) scale(1.0); 
+                filter: blur(1px);
+            }
+            100% { 
+                transform: rotate(360deg) scale(0.95); 
+                filter: blur(0px);
+            }
         }
 
         .loading-balls-container.spinning {
-            animation: rotateBalls 3s linear infinite, ballPulse 2s ease-in-out infinite;
+            animation: rotateBalls 4s ease-in-out infinite;
         }
 
         .loading-quote-text {
@@ -512,7 +536,7 @@
         .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
 
         .mini-loader-balls.spinning {
-            animation: rotateBalls 3s linear infinite, ballPulse 2s ease-in-out infinite;
+            animation: rotateBalls 4s ease-in-out infinite;
         }
 
         .mini-loader-balls.explode {
@@ -1105,12 +1129,12 @@
 
         // ==================== FALLBACK QUOTES ====================
         const fallbackQuotes = {
-            basketball: `"Man, the league is wild right now. Every night there's a new highlight reel play."`,
-            baseball: `"This season's been something else. The young talent coming up is unreal."`,
-            football: `"The parity in the league this year is crazy. Any given Sunday."`,
-            soccer: `"The tactical evolution we're seeing is next level."`,
-            golf: `"The depth on tour right now is insane."`,
-            tennis: `"The changing of the guard is finally here."`,
+            basketball: `"Too many sportsguys talking sports right now. Check back later!"`,
+            baseball: `"Too many sportsguys talking sports right now. Check back later!"`,
+            football: `"Too many sportsguys talking sports right now. Check back later!"`,
+            soccer: `"Too many sportsguys talking sports right now. Check back later!"`,
+            golf: `"Too many sportsguys talking sports right now. Check back later!"`,
+            tennis: `"Too many sportsguys talking sports right now. Check back later!"`,
         };
 
         // ==================== UTILITIES ====================
