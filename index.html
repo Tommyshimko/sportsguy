@@ -17,10 +17,10 @@
     <meta name="twitter:card" content="summary">
     <meta name="description" content="Sound like a sports expert. Get hyper-local takes for your city.">
     
-    <!-- Google Fonts: Instrument Serif + Anton + Inter Tight -->
+    <!-- Google Fonts: Instrument Sans + Anton + Inter Tight -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;500;600;700&family=Inter+Tight:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -29,6 +29,7 @@
             --bg: #FAF9F6;
             --card-bg: #FFFFFF;
             --text: #1a1a1a;
+            --text-brown: #714E4E;
             --text-muted: #6b7280;
             --border: #e5e5e5;
             --shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -97,11 +98,12 @@
         }
 
         .onboarding-title-serif {
-            font-family: 'Instrument Serif', Georgia, serif;
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 2rem;
-            font-style: italic;
-            font-weight: 400;
+            font-style: normal;
+            font-weight: 600;
             line-height: 1.2;
+            color: var(--text-brown);
         }
 
         .onboarding-title-sans {
@@ -132,7 +134,7 @@
             font-family: 'Anton', sans-serif;
             font-size: 1.125rem;
             font-weight: 400;
-            color: var(--green);
+            color: var(--text-brown);
             cursor: pointer;
             box-shadow: var(--shadow);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -247,13 +249,13 @@
                 transform: scale(0.5); 
             }
             25% { 
-                transform: scale(0.8); 
+                transform: scale(1.2); 
             }
             50% { 
-                transform: scale(1.6); 
+                transform: scale(2.5); 
             }
             75% { 
-                transform: scale(0.8); 
+                transform: scale(1.2); 
             }
             100% { 
                 transform: scale(0.5); 
@@ -323,10 +325,11 @@
             bottom: 15%;
             left: 50%;
             transform: translateX(-50%);
-            font-family: 'Instrument Serif', Georgia, serif;
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 1rem;
-            font-style: italic;
-            color: var(--text-muted);
+            font-style: normal;
+            font-weight: 500;
+            color: var(--text-brown);
             text-align: center;
             width: 85%;
             max-width: 320px;
@@ -421,12 +424,12 @@
         }
 
         .quote {
-            font-family: 'Instrument Serif', Georgia, serif;
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: clamp(1.5rem, 6vw, 2rem);
-            font-weight: 400;
-            font-style: italic;
+            font-weight: 700;
+            font-style: normal;
             line-height: 1.45;
-            color: var(--text);
+            color: var(--text-brown);
         }
 
         .quote-hint {
@@ -534,10 +537,11 @@
             bottom: 18%;
             left: 50%;
             transform: translateX(-50%);
-            font-family: 'Instrument Serif', Georgia, serif;
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 0.95rem;
-            font-style: italic;
-            color: var(--text-muted);
+            font-style: normal;
+            font-weight: 500;
+            color: var(--text-brown);
             text-align: center;
             width: 85%;
             max-width: 300px;
@@ -626,10 +630,10 @@
         }
 
         .sport-name {
-            font-family: 'Instrument Serif', Georgia, serif;
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 1.25rem;
-            font-weight: 400;
-            color: var(--text);
+            font-weight: 600;
+            color: var(--text-brown);
             text-align: center;
         }
 
@@ -903,13 +907,12 @@
     <!-- Onboarding Screen 1: Welcome -->
     <div id="onboarding-1" class="screen onboarding-screen active">
         <div class="onboarding-content">
-            <span class="onboarding-title-serif">Have you ever</span>
-            <span class="onboarding-title-serif">wanted to be a</span>
+            <span class="onboarding-title-serif">Want to be a</span>
             <div class="onboarding-title-sans">
                 <span class="text-green">SPORTS</span><span class="text-blue">GUY?</span>
             </div>
         </div>
-        <button class="lfg-btn" id="lfg-btn">LFG</button>
+        <button class="lfg-btn" id="lfg-btn">SPORTS</button>
     </div>
 
     <!-- Onboarding Screen 2: Location Prompt -->
