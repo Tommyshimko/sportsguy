@@ -24,32 +24,48 @@ export default async function handler(req, res) {
   }
 
   const sportContext = {
-    basketball: 'NBA',
-    football: 'NFL',
-    baseball: 'MLB',
-    soccer: 'MLS',
-    tennis: 'ATP/WTA tennis',
-    golf: 'PGA Tour'
+    basketball: 'NBA 2024-25 season',
+    football: 'NFL 2024-25 season',
+    baseball: 'MLB 2025 season',
+    soccer: 'MLS 2025 season',
+    tennis: 'current ATP/WTA tour',
+    golf: 'PGA Tour 2025'
   };
 
   const sportLeague = sportContext[sport] || sport;
 
-  const systemPrompt = `You give brief, punchy sports bar talk. Location: ${location}. Sport: ${sportLeague}.
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
-RULES:
-1. Reference the LOCAL team for ${location} (e.g., NYC = Giants/Jets/Knicks/Yankees)
-2. Use web search to find what happened TODAY or LAST NIGHT - the most recent game or news possible
-3. Mention specific players, scores, or storylines from the LAST 24 HOURS
-4. Sound like a real fan - casual, opinionated
-5. If there was a game today/last night, reference the score and key moments
+  const systemPrompt = `You give brief, punchy sports bar talk. Today is ${currentDate}. Location: ${location}. Sport: ${sportLeague}.
 
-FORMAT - CRITICAL:
-- Output ONLY the quote, nothing else
-- 2 sentences maximum
-- Start with " and end with "
-- NO preamble like "Let me search" or "Here's a take"
-- NO meta-commentary about searching
-- Just the bar talk quote itself`;
+FRESHNESS REQUIREMENTS - CRITICAL:
+1. ONLY reference events from the current 2024-25 season (or current active season)
+2. Prioritize TODAY'S games/news first, then yesterday's, then this week's
+3. NEVER mention outdated seasons, retired players, or events older than 2 weeks unless directly relevant to current storylines
+4. Always search for the MOST RECENT available information about local teams
+5. If no recent games, reference current standings, trades, injuries, or hot storylines from THIS WEEK
+
+LOCAL TEAM FOCUS:
+6. Reference the LOCAL team for ${location} (e.g., NYC = Giants/Jets/Knicks/Yankees/Mets depending on sport)
+7. Mention specific players, scores, or developments from the LAST 48 HOURS if available
+8. Include current season context (playoffs, standings, streaks, recent performance)
+
+TONE & FORMAT - CRITICAL:
+9. Sound like a real fan - casual, opinionated, current
+10. Use current sports slang and references
+11. Output ONLY the quote, nothing else
+12. 2 sentences maximum
+13. Start with " and end with "
+14. NO preamble like "Let me search" or "Here's a take"
+15. NO meta-commentary about searching
+16. Just the bar talk quote itself
+
+AVOID: Old stats, retired players, past seasons, or anything that sounds dated or stale.`;
 
   // Retry function with exponential backoff
   async function callWithRetry(maxRetries = 3) {
@@ -72,7 +88,7 @@ FORMAT - CRITICAL:
             tool_choice: { type: 'auto' },
             messages: [{
               role: 'user',
-              content: `What happened TODAY or LAST NIGHT in ${sportLeague} for ${location}'s team? Search for the most recent game scores and news from the last 24 hours. Give me a 2 sentence bar take.`
+              content: `Search for what happened TODAY (${currentDate}) or in the LAST 48 HOURS in ${sportLeague} involving ${location}'s local team. Find the most recent: game results, breaking news, trades, injuries, or current storylines. If no recent games, search for current season standings, player performance, or trending stories from THIS WEEK. Give me a fresh, current 2-sentence sports bar take that sounds like it's happening right now.`
             }],
             system: systemPrompt
           })
