@@ -650,6 +650,13 @@
             opacity: 1;
         }
 
+        #location-screen .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+        }
+
         .location-content {
             padding: 0 20px;
         }
@@ -1041,6 +1048,7 @@
             <div class="modal-title">
                 <span class="text-green">YOUR</span> <span class="text-blue">LOCATION</span>
             </div>
+            <div class="modal-spacer"></div>
         </header>
         <div class="location-content">
             <div class="search-bar">
@@ -1082,8 +1090,11 @@
                 this.el = el;
                 this.chars = '!<>-_\\/[]{}—=+*^?#________';
                 this.update = this.update.bind(this);
+                this.colorMap = null; // For preserving colors
             }
-            setText(newText) {
+            setText(newText, colorMap = null) {
+                // colorMap is an array of {start, end, color} for coloring specific ranges
+                this.colorMap = colorMap;
                 const oldText = this.el.innerText;
                 const length = Math.max(oldText.length, newText.length);
                 const promise = new Promise((resolve) => this.resolve = resolve);
@@ -1100,22 +1111,32 @@
                 this.update();
                 return promise;
             }
+            getColorForIndex(index) {
+                if (!this.colorMap) return 'var(--text-brown)';
+                for (const range of this.colorMap) {
+                    if (index >= range.start && index < range.end) {
+                        return range.color;
+                    }
+                }
+                return 'var(--text-brown)';
+            }
             update() {
                 let output = '';
                 let complete = 0;
                 for (let i = 0, n = this.queue.length; i < n; i++) {
                     let { from, to, start, end, char } = this.queue[i];
+                    const color = this.getColorForIndex(i);
                     if (this.frame >= end) {
                         complete++;
-                        output += to;
+                        output += `<span style="color: ${color};">${to}</span>`;
                     } else if (this.frame >= start) {
                         if (!char || Math.random() < 0.28) {
                             char = this.randomChar();
                             this.queue[i].char = char;
                         }
-                        output += `<span style="opacity: 0.4;">${char}</span>`;
+                        output += `<span style="color: ${color}; opacity: 0.5;">${char}</span>`;
                     } else {
-                        output += from;
+                        output += `<span style="color: ${color};">${from}</span>`;
                     }
                 }
                 this.el.innerHTML = output;
@@ -1219,6 +1240,11 @@
             if (!isOnboarding && el.quoteContainer) {
                 el.quoteContainer.classList.add('blurred');
             }
+            
+            // Scramble logo to "YOUR LOCATION" (only if not onboarding - logo not visible then)
+            if (!isOnboarding) {
+                scrambleToText('YOUR LOCATION');
+            }
         }
 
         function hideLocationModal() {
@@ -1228,6 +1254,12 @@
             // Unblur the quote content
             if (el.quoteContainer) {
                 el.quoteContainer.classList.remove('blurred');
+            }
+            
+            // Scramble back to "SPORTSGUY"
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            if (!isOnboarding) {
+                scrambleToText('SPORTSGUY');
             }
         }
 
@@ -1590,12 +1622,44 @@
         // Text scramble instance for logo
         let logoScramble = null;
         const logoOriginalHTML = '<span class="text-green">SPORTS</span><span class="text-blue">GUY</span>';
+        
+        // Color maps for different texts (green first word, blue second word)
+        const colorMaps = {
+            'SPORTSGUY': [
+                { start: 0, end: 6, color: 'var(--green)' },  // SPORTS
+                { start: 6, end: 9, color: 'var(--blue)' }    // GUY
+            ],
+            'CHOOSE SPORT': [
+                { start: 0, end: 6, color: 'var(--green)' },  // CHOOSE
+                { start: 6, end: 7, color: 'var(--green)' },  // space
+                { start: 7, end: 12, color: 'var(--blue)' }   // SPORT
+            ],
+            'YOUR LOCATION': [
+                { start: 0, end: 4, color: 'var(--green)' },  // YOUR
+                { start: 4, end: 5, color: 'var(--green)' },  // space
+                { start: 5, end: 13, color: 'var(--blue)' }   // LOCATION
+            ]
+        };
+
+        function scrambleToText(text) {
+            const logoText = document.getElementById('logo-text');
+            if (!logoText) return;
+            
+            if (!logoScramble) {
+                logoScramble = new TextScramble(logoText);
+            }
+            
+            const colorMap = colorMaps[text] || null;
+            logoScramble.setText(text, colorMap);
+        }
 
         function showSportModal() {
             screens.sport.classList.add('active');
             el.modalOverlay.classList.add('active');
             // Blur the quote content
             el.quoteContainer.classList.add('blurred');
+            // Scramble logo to "CHOOSE SPORT"
+            scrambleToText('CHOOSE SPORT');
         }
 
         function hideSportModal() {
@@ -1603,6 +1667,8 @@
             el.modalOverlay.classList.remove('active');
             // Unblur the quote content
             el.quoteContainer.classList.remove('blurred');
+            // Scramble back to "SPORTSGUY"
+            scrambleToText('SPORTSGUY');
         }
 
         // Easter egg - scramble logo text when clicked
@@ -1614,20 +1680,20 @@
                 logoScramble = new TextScramble(logoText);
             }
             
-            const phrases = ['SPORTSGUY', 'LETS GO!', 'GAME TIME', 'BIG PLAY!', 'SPORTSGUY'];
+            const phrases = [
+                { text: 'LETS GO!', colors: [{ start: 0, end: 4, color: 'var(--green)' }, { start: 4, end: 8, color: 'var(--blue)' }] },
+                { text: 'GAME TIME', colors: [{ start: 0, end: 4, color: 'var(--green)' }, { start: 4, end: 9, color: 'var(--blue)' }] },
+                { text: 'BIG PLAY!', colors: [{ start: 0, end: 3, color: 'var(--green)' }, { start: 3, end: 9, color: 'var(--blue)' }] },
+                { text: 'SPORTSGUY', colors: colorMaps['SPORTSGUY'] }
+            ];
             let i = 0;
             
             const next = () => {
                 if (i < phrases.length) {
-                    logoScramble.setText(phrases[i]).then(() => {
+                    logoScramble.setText(phrases[i].text, phrases[i].colors).then(() => {
                         i++;
                         if (i < phrases.length) {
                             setTimeout(next, 800);
-                        } else {
-                            // Restore original colored HTML
-                            setTimeout(() => {
-                                logoText.innerHTML = logoOriginalHTML;
-                            }, 500);
                         }
                     });
                 }
