@@ -1094,6 +1094,7 @@
             constructor() {
                 this.cache = this.loadCache();
                 this.cleanExpired();
+                this.cleanInvalid();
             }
 
             // Generate cache key from sport and location
@@ -1154,12 +1155,27 @@
                     return null;
                 }
 
+                // Validate cached quote before returning
+                const quote = entry.quote;
+                if (!quote || typeof quote !== 'string' || quote.trim().length < 10) {
+                    console.error('Invalid cached quote found, removing:', quote);
+                    delete this.cache[key];
+                    this.saveCache();
+                    return null;
+                }
+
                 console.log('Quote cache HIT for:', { sport, location });
                 return entry.quote;
             }
 
-            // Store quote in cache
+            // Store quote in cache (with validation)
             set(sport, location, quote) {
+                // Validate before storing
+                if (!quote || typeof quote !== 'string' || quote.trim().length < 10) {
+                    console.error('Refusing to cache invalid quote:', quote);
+                    return;
+                }
+
                 const key = this.generateKey(sport, location);
                 this.cache[key] = {
                     quote: quote,
@@ -1169,6 +1185,27 @@
                 };
                 this.saveCache();
                 console.log('Quote cached for:', { sport, location });
+            }
+
+            // Clean up invalid cached entries
+            cleanInvalid() {
+                let cleaned = false;
+
+                for (const [key, entry] of Object.entries(this.cache)) {
+                    const quote = entry.quote;
+                    if (!quote || typeof quote !== 'string' || quote.trim().length < 10) {
+                        console.log('Removing invalid cached quote:', key, quote);
+                        delete this.cache[key];
+                        cleaned = true;
+                    }
+                }
+
+                if (cleaned) {
+                    this.saveCache();
+                    console.log('Cleaned invalid cache entries');
+                }
+
+                return cleaned;
             }
 
             // Get cache stats for debugging
@@ -1188,12 +1225,24 @@
         // Initialize quote cache
         const quoteCache = new QuoteCache();
 
-        // Debug function for console access
+        // Debug functions for console access
         window.debugQuoteCache = function() {
             const stats = quoteCache.getStats();
             console.log('Quote Cache Stats:', stats);
             console.log('Cache contents:', quoteCache.cache);
             return stats;
+        };
+
+        window.clearQuoteCache = function() {
+            quoteCache.cache = {};
+            quoteCache.saveCache();
+            console.log('Quote cache cleared!');
+        };
+
+        window.cleanInvalidQuotes = function() {
+            const cleaned = quoteCache.cleanInvalid();
+            console.log(cleaned ? 'Invalid quotes cleaned!' : 'No invalid quotes found');
+            return cleaned;
         };
 
         // ==================== TEXT SCRAMBLE CLASS ====================
@@ -1651,10 +1700,24 @@
                     throw new Error(data.error);
                 }
 
-                // Cache the fresh quote
-                quoteCache.set(currentSport, currentLocation, data.quote);
+                // Validate quote before caching/returning
+                const quote = data.quote;
+                if (!quote || typeof quote !== 'string' || quote.trim().length === 0) {
+                    console.error('Empty or invalid quote received from API:', quote);
+                    throw new Error('Invalid quote received');
+                }
 
-                return data.quote;
+                // Additional validation - ensure quote has actual content
+                const cleanQuote = quote.trim();
+                if (cleanQuote === '""' || cleanQuote === '"' || cleanQuote.length < 10) {
+                    console.error('Quote too short or empty quotes:', cleanQuote);
+                    throw new Error('Quote content invalid');
+                }
+
+                // Cache the validated quote
+                quoteCache.set(currentSport, currentLocation, quote);
+
+                return quote;
             } catch (error) {
                 console.error('Fetch error:', error);
                 // Show error in console with details
