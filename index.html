@@ -1086,6 +1086,116 @@
         let recentLocations = JSON.parse(localStorage.getItem('sportsguy_recent_locations') || '[]');
         let pendingQuote = '';
 
+        // ==================== QUOTE CACHE SYSTEM ====================
+        const CACHE_KEY = 'sportsguy_quote_cache';
+        const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+        class QuoteCache {
+            constructor() {
+                this.cache = this.loadCache();
+                this.cleanExpired();
+            }
+
+            // Generate cache key from sport and location
+            generateKey(sport, location) {
+                return `${sport.toLowerCase()}_${location.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+            }
+
+            // Load cache from localStorage
+            loadCache() {
+                try {
+                    const cached = localStorage.getItem(CACHE_KEY);
+                    return cached ? JSON.parse(cached) : {};
+                } catch (error) {
+                    console.error('Error loading quote cache:', error);
+                    return {};
+                }
+            }
+
+            // Save cache to localStorage
+            saveCache() {
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(this.cache));
+                } catch (error) {
+                    console.error('Error saving quote cache:', error);
+                }
+            }
+
+            // Clean expired entries
+            cleanExpired() {
+                const now = Date.now();
+                let cleaned = false;
+
+                for (const [key, entry] of Object.entries(this.cache)) {
+                    if (now - entry.timestamp > CACHE_TTL) {
+                        delete this.cache[key];
+                        cleaned = true;
+                    }
+                }
+
+                if (cleaned) {
+                    this.saveCache();
+                }
+            }
+
+            // Get quote from cache if valid
+            get(sport, location) {
+                const key = this.generateKey(sport, location);
+                const entry = this.cache[key];
+
+                if (!entry) {
+                    return null;
+                }
+
+                // Check if expired
+                if (Date.now() - entry.timestamp > CACHE_TTL) {
+                    delete this.cache[key];
+                    this.saveCache();
+                    return null;
+                }
+
+                console.log('Quote cache HIT for:', { sport, location });
+                return entry.quote;
+            }
+
+            // Store quote in cache
+            set(sport, location, quote) {
+                const key = this.generateKey(sport, location);
+                this.cache[key] = {
+                    quote: quote,
+                    timestamp: Date.now(),
+                    sport: sport,
+                    location: location
+                };
+                this.saveCache();
+                console.log('Quote cached for:', { sport, location });
+            }
+
+            // Get cache stats for debugging
+            getStats() {
+                const entries = Object.keys(this.cache).length;
+                const oldestEntry = Math.min(...Object.values(this.cache).map(e => e.timestamp));
+                const oldestAge = entries > 0 ? Math.round((Date.now() - oldestEntry) / 1000 / 60) : 0;
+
+                return {
+                    entries: entries,
+                    oldestAgeMinutes: oldestAge,
+                    ttlHours: CACHE_TTL / (60 * 60 * 1000)
+                };
+            }
+        }
+
+        // Initialize quote cache
+        const quoteCache = new QuoteCache();
+
+        // Debug function for console access
+        window.debugQuoteCache = function() {
+            const stats = quoteCache.getStats();
+            console.log('Quote Cache Stats:', stats);
+            console.log('Cache contents:', quoteCache.cache);
+            return stats;
+        };
+
         // ==================== TEXT SCRAMBLE CLASS ====================
         class TextScramble {
             constructor(el) {
@@ -1505,7 +1615,16 @@
         async function fetchQuote() {
             try {
                 console.log('Fetching quote for:', { sport: currentSport, location: currentLocation });
-                
+
+                // Check cache first
+                const cachedQuote = quoteCache.get(currentSport, currentLocation);
+                if (cachedQuote) {
+                    console.log('Using cached quote, skipping API call');
+                    return cachedQuote;
+                }
+
+                console.log('Quote cache MISS, making API call');
+
                 // Create abort controller for timeout
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -1531,7 +1650,10 @@
                     console.error('API Error:', data.error);
                     throw new Error(data.error);
                 }
-                
+
+                // Cache the fresh quote
+                quoteCache.set(currentSport, currentLocation, data.quote);
+
                 return data.quote;
             } catch (error) {
                 console.error('Fetch error:', error);
