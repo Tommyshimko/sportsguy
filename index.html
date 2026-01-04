@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<!-- Test commit from terminal -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SportsGuy</title>
+    
+    <!-- Favicon - using Baseball icon -->
+    <link rel="icon" type="image/png" href="/icons/Baseball.png">
+    <link rel="apple-touch-icon" href="/icons/Baseball.png">
+    
+    <!-- Social sharing / Open Graph -->
+    <meta property="og:title" content="SportsGuy">
+    <meta property="og:description" content="Sound like a sports expert. Get hyper-local takes for your city.">
+    <meta property="og:image" content="https://sportsguy.xyz/icons/Basketball.png">
+    <meta property="og:url" content="https://sportsguy.xyz">
+    <meta name="twitter:card" content="summary">
+    <meta name="description" content="Sound like a sports expert. Get hyper-local takes for your city.">
+    
+    <!-- Google Fonts: Instrument Sans + Instrument Serif + Anton + Inter Tight -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --green: #22C55E;
+            --blue: #3B82F6;
+            --bg: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text: #1a1a1a;
+            --text-brown: #714E4E;
+            --text-muted: #6b7280;
+            --border: #e5e5e5;
+            --shadow: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-lg: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            min-height: 100%;
+            min-height: -webkit-fill-available;
+        }
+
+        body {
+            font-family: 'Anton', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            min-height: 100dvh;
+            min-height: -webkit-fill-available;
+            overflow-x: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            height: 100dvh;
+            height: -webkit-fill-available;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            overflow: visible;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* ==================== ONBOARDING ==================== */
+        .onboarding-screen {
+            justify-content: center;
+            align-items: center;
+            padding: 40px 28px;
+            text-align: center;
+            overflow: visible;
+        }
+
+        .onboarding-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .onboarding-title-serif {
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 2rem;
+            font-style: normal;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text-brown);
+        }
+
+        .onboarding-title-sans {
+            font-family: 'Anton', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .onboarding-subtitle {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            margin-top: -4px;
+        }
+
+        .lfg-btn {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            border: none;
+            border-radius: 20px;
+            padding: 18px 64px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 400;
+            color: var(--text-brown);
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            z-index: 10;
+        }
+
+        .lfg-btn:hover {
+            transform: translateX(-50%) scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .lfg-btn:active {
+            transform: translateX(-50%) scale(0.98);
+        }
+
+        /* Location hint button in top right */
+        .location-hint-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .location-hint-btn:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .location-hint-btn:active {
+            transform: scale(0.95);
+        }
+
+        .location-hint-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text);
+        }
+
+        /* Arrow pointing to location - using PNG image */
+        .arrow-container {
+            position: absolute;
+            top: 68px;
+            right: 72px;
+            width: 100px;
+            height: 160px;
+        }
+
+        .arrow-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* ==================== LOADING SCREEN ==================== */
+        #loading-screen {
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #loading-screen header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            position: relative;
+            z-index: 10;
+            background: var(--bg);
+        }
+
+        .loading-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .loading-gradient {
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            background-image: url('icons/gradient.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0;
+            filter: blur(20px);
+            transition: opacity 1.5s ease-out, filter 1.5s ease-out;
+        }
+
+        .loading-gradient.visible {
+            opacity: 1;
+            filter: blur(0px);
+            animation: gradientMorph 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes gradientMorph {
+            0% { 
+                transform: scale(1.3); 
+            }
+            50% { 
+                transform: scale(3); 
+            }
+            100% { 
+                transform: scale(1.3); 
+            }
+        }
+
+        .loading-balls-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            opacity: 0;
+            filter: blur(15px);
+            transition: opacity 1.2s ease-out, filter 1.2s ease-out, transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .loading-balls-container.visible {
+            opacity: 1;
+            filter: blur(0px);
+        }
+
+        .loading-balls-container.explode {
+            transform: scale(5);
+            opacity: 0;
+            filter: blur(20px);
+        }
+
+        .loading-ball {
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+        }
+
+        /* Position balls in a circle */
+        .loading-ball:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .loading-ball:nth-child(2) { top: 20%; right: 0; }
+        .loading-ball:nth-child(3) { bottom: 20%; right: 5%; }
+        .loading-ball:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .loading-ball:nth-child(5) { bottom: 20%; left: 5%; }
+        .loading-ball:nth-child(6) { top: 20%; left: 0; }
+
+        @keyframes rotateBalls {
+            0% { 
+                transform: rotate(0deg) scale(0.8); 
+            }
+            50% { 
+                transform: rotate(1800deg) scale(1.2); 
+            }
+            100% { 
+                transform: rotate(3600deg) scale(0.8); 
+            }
+        }
+
+        .loading-balls-container.spinning {
+            animation: rotateBalls 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+            animation-delay: 1.5s;
+        }
+
+        .loading-quote-text {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1rem;
+            font-style: normal;
+            font-weight: 500;
+            color: var(--text-brown);
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-quote-text.visible {
+            opacity: 1;
+        }
+
+        /* ==================== MAIN SCREEN ==================== */
+        #main-screen header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            position: relative;
+            z-index: 60;
+            background: var(--bg);
+        }
+
+        .icon-btn {
+            width: 48px;
+            height: 48px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .icon-btn:active {
+            transform: scale(0.98);
+        }
+
+        .icon-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .icon-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--text);
+        }
+
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .logo-text {
+            display: inline-block;
+        }
+
+        .text-green { color: var(--green); }
+        .text-blue { color: var(--blue); }
+
+        #main-screen main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 28px;
+            padding-bottom: 100px;
+            overflow-y: auto;
+        }
+
+        .quote-container {
+            cursor: pointer;
+            transition: opacity 0.5s ease, filter 0.5s ease;
+        }
+
+        .quote-container:active {
+            opacity: 0.7;
+        }
+
+        .quote-container.blurred {
+            filter: blur(8px);
+            opacity: 0.6;
+        }
+
+        .quote {
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: clamp(1.5rem, 6vw, 2rem);
+            font-weight: 700;
+            font-style: normal;
+            line-height: 1.45;
+            color: var(--text-brown);
+        }
+
+        .quote-hint {
+            position: fixed;
+            bottom: env(safe-area-inset-bottom, 20px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding-bottom: 20px;
+        }
+
+        .quote-hint.visible {
+            opacity: 1;
+        }
+
+        .quote-container.loading {
+            filter: blur(8px);
+            opacity: 0.4;
+        }
+
+        .quote-container.revealing {
+            animation: revealQuote 1.5s ease forwards;
+        }
+
+        @keyframes revealQuote {
+            0% { opacity: 0; filter: blur(15px); }
+            50% { opacity: 0.6; filter: blur(8px); }
+            100% { opacity: 1; filter: blur(0px); }
+        }
+
+        /* Mini loader for regeneration */
+        #mini-loader {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 50;
+        }
+
+        #mini-loader.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mini-loader-gradient {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            background-image: url('icons/gradient.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            animation: gradientMorph 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        .mini-loader-balls {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+        }
+
+        .mini-loader-balls img {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+        }
+
+        .mini-loader-balls img:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .mini-loader-balls img:nth-child(2) { top: 18%; right: 5%; }
+        .mini-loader-balls img:nth-child(3) { bottom: 18%; right: 5%; }
+        .mini-loader-balls img:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .mini-loader-balls img:nth-child(5) { bottom: 18%; left: 5%; }
+        .mini-loader-balls img:nth-child(6) { top: 18%; left: 5%; }
+
+        .mini-loader-balls.spinning {
+            animation: rotateBalls 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        .mini-loader-balls.explode {
+            transform: scale(3);
+            opacity: 0;
+            filter: blur(10px);
+        }
+
+        .mini-loader-text {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.95rem;
+            font-style: normal;
+            font-weight: 500;
+            color: var(--text-brown);
+            text-align: center;
+            width: 85%;
+            max-width: 300px;
+            transition: opacity 0.3s ease;
+        }
+
+        /* ==================== SPORT MODAL ==================== */
+        #sport-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(250, 249, 246, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 101;
+            transform: translateY(100%);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+        }
+
+        #sport-screen.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #sport-screen .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+        }
+
+        .modal-spacer {
+            width: 48px;
+        }
+
+        .modal-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .sport-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 20px 24px;
+        }
+
+        .sport-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 24px;
+            padding: 24px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .sport-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .sport-card:active {
+            transform: scale(0.97);
+        }
+
+        .sport-card.selected {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 0 2px var(--green), 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .sport-icon {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .sport-name {
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: var(--text);
+            text-align: center;
+        }
+
+        /* ==================== LOCATION MODAL ==================== */
+        #location-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg);
+            z-index: 101;
+            transform: translateY(100%);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+        }
+
+        #location-screen.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #location-screen .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+        }
+
+        .location-content {
+            padding: 0 20px;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 12px 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .search-bar svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .search-bar input {
+            flex: 1;
+            border: none;
+            background: none;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1rem;
+            color: var(--text);
+            outline: none;
+        }
+
+        .search-bar input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s ease;
+            display: none;
+        }
+
+        .clear-btn.visible {
+            display: block;
+        }
+
+        .clear-btn:hover {
+            opacity: 1;
+        }
+
+        .clear-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .cancel-btn {
+            background: var(--bg);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--green);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .cancel-btn:hover {
+            background: #f0efec;
+        }
+
+        .current-location {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .current-location:active {
+            opacity: 0.7;
+        }
+
+        .current-location svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text);
+            margin-top: 2px;
+        }
+
+        .current-location-text {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .current-location-text h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .current-location-text p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .current-location-text .status-success {
+            color: var(--green);
+        }
+
+        .current-location-text .retry-link {
+            color: var(--green);
+            cursor: pointer;
+        }
+
+        .location-list {
+            list-style: none;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .location-item {
+            padding: 18px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .location-item:hover {
+            color: var(--green);
+        }
+
+        .location-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Autocomplete dropdown */
+        .autocomplete-dropdown {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            margin-top: 8px;
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .autocomplete-dropdown.visible {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        .autocomplete-item {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .autocomplete-item:active {
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .autocomplete-item svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--green);
+            flex-shrink: 0;
+        }
+
+        .confirm-location-btn {
+            position: fixed;
+            bottom: 40px;
+            left: 20px;
+            right: 20px;
+            background: var(--green);
+            border: none;
+            border-radius: 16px;
+            padding: 18px 32px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 400;
+            color: white;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            z-index: 102;
+        }
+
+        .confirm-location-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .confirm-location-btn:active {
+            transform: scale(0.98);
+        }
+
+        .confirm-location-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .recent-header {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 100;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <!-- Onboarding Screen 1: Welcome -->
+    <div id="onboarding-1" class="screen onboarding-screen active">
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">Want to be a</span>
+            <div class="onboarding-title-sans">
+                <span class="text-green">SPORTS</span><span class="text-blue">GUY?</span>
+            </div>
+        </div>
+        <button class="lfg-btn" id="lfg-btn">SPORTS</button>
+    </div>
+
+    <!-- Onboarding Screen 2: Location Prompt -->
+    <div id="onboarding-2" class="screen onboarding-screen">
+        <button class="location-hint-btn" id="location-hint-btn" aria-label="Set location">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </button>
+        
+        <!-- Curved arrow pointing to location icon -->
+        <div class="arrow-container">
+            <img class="arrow-img" src="icons/Arrow.png" alt="">
+        </div>
+        
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">first, set your</span>
+            <span class="onboarding-title-sans text-blue">LOCATION</span>
+        </div>
+    </div>
+
+    <!-- Onboarding Screen 3: Success -->
+    <div id="onboarding-3" class="screen onboarding-screen">
+        <button class="location-hint-btn" style="pointer-events: none;" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </button>
+        <div class="onboarding-content">
+            <span class="onboarding-title-serif">hell yea!</span>
+            <span class="onboarding-title-sans text-green">SPORTS.</span>
+            <div class="onboarding-subtitle">
+                <span>(</span><span class="text-blue">GUY</span><span>)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <header>
+            <button class="icon-btn" id="loading-sport-btn" aria-label="Choose sport" style="pointer-events: none;">
+                <img id="loading-sport-icon" src="icons/Basketball.png" alt="Sport">
+            </button>
+            <div class="logo">
+                <span class="text-green">SPORTS</span><span class="text-blue">GUY</span>
+            </div>
+            <button class="icon-btn" style="pointer-events: none;" aria-label="Location">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </button>
+        </header>
+        <div class="loading-content">
+            <div class="loading-gradient" id="loading-gradient"></div>
+            <div class="loading-balls-container" id="loading-balls">
+                <img class="loading-ball" src="icons/Basketball.png" alt="">
+                <img class="loading-ball" src="icons/Football.png" alt="">
+                <img class="loading-ball" src="icons/Tennis.png" alt="">
+                <img class="loading-ball" src="icons/Soccer.png" alt="">
+                <img class="loading-ball" src="icons/Golf.png" alt="">
+                <img class="loading-ball" src="icons/Baseball.png" alt="">
+            </div>
+        </div>
+        <p class="loading-quote-text" id="loading-quote-text"></p>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="screen">
+        <header>
+            <button class="icon-btn" id="sport-btn" aria-label="Choose sport">
+                <img id="current-sport-icon" src="icons/Basketball.png" alt="Sport">
+            </button>
+            <div class="logo" id="main-logo">
+                <span id="logo-text" class="logo-text"><span class="text-green">SPORTS</span><span class="text-blue">GUY</span></span>
+            </div>
+            <button class="icon-btn" id="location-btn" aria-label="Set location">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </button>
+        </header>
+        <main>
+            <div class="quote-container" id="quote-container">
+                <p class="quote" id="quote-text"></p>
+            </div>
+            <p class="quote-hint" id="quote-hint">Tap to generate a new take</p>
+        </main>
+    </div>
+
+    <!-- Sport Selection Modal -->
+    <div id="sport-screen" class="screen">
+        <header class="modal-header">
+            <button class="icon-btn" id="close-sport-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+            <div class="modal-title">
+                <span class="text-green">CHOOSE</span> <span class="text-blue">SPORT</span>
+            </div>
+            <div class="modal-spacer"></div>
+        </header>
+        <div class="sport-grid">
+            <button class="sport-card" data-sport="baseball" data-icon="icons/Baseball.png">
+                <img class="sport-icon" src="icons/Baseball.png" alt="Baseball">
+                <span class="sport-name">Baseball</span>
+            </button>
+            <button class="sport-card" data-sport="basketball" data-icon="icons/Basketball.png">
+                <img class="sport-icon" src="icons/Basketball.png" alt="Basketball">
+                <span class="sport-name">Basketball</span>
+            </button>
+            <button class="sport-card" data-sport="golf" data-icon="icons/Golf.png">
+                <img class="sport-icon" src="icons/Golf.png" alt="Golf">
+                <span class="sport-name">Golf</span>
+            </button>
+            <button class="sport-card" data-sport="tennis" data-icon="icons/Tennis.png">
+                <img class="sport-icon" src="icons/Tennis.png" alt="Tennis">
+                <span class="sport-name">Tennis</span>
+            </button>
+            <button class="sport-card" data-sport="soccer" data-icon="icons/Soccer.png">
+                <img class="sport-icon" src="icons/Soccer.png" alt="Soccer">
+                <span class="sport-name">Soccer</span>
+            </button>
+            <button class="sport-card" data-sport="football" data-icon="icons/Football.png">
+                <img class="sport-icon" src="icons/Football.png" alt="Football">
+                <span class="sport-name">Football</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Location Modal -->
+    <div id="location-screen" class="screen">
+        <header class="modal-header">
+            <button class="icon-btn" id="close-location-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="modal-title">
+                <span class="text-green">YOUR</span> <span class="text-blue">LOCATION</span>
+            </div>
+            <div class="modal-spacer"></div>
+        </header>
+        <div class="location-content">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <input type="text" id="location-input" placeholder="Enter zip code or city">
+                <button class="clear-btn" id="clear-location">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+                <button class="cancel-btn" id="cancel-location">Cancel</button>
+            </div>
+            <div class="current-location" id="use-current-location">
+                <svg viewBox="0 0 24 24"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z" transform="rotate(-90 12 12)"/></svg>
+                <div class="current-location-text">
+                    <h3>Current location</h3>
+                    <p id="location-status">Tap to detect your location</p>
+                </div>
+            </div>
+            <div class="recent-header" id="recent-header" style="display: none;">Recent</div>
+            <ul class="location-list" id="location-suggestions"></ul>
+        </div>
+        <button class="confirm-location-btn" id="confirm-location-btn" disabled>Set Location</button>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay"></div>
+
+    <script>
+        // ==================== STATE ====================
+        let currentSport = '';
+        let currentIcon = '';
+        let currentLocation = '';
+        let hasCompletedOnboarding = localStorage.getItem('sportsguy_onboarded') === 'true';
+        let recentLocations = JSON.parse(localStorage.getItem('sportsguy_recent_locations') || '[]');
+        let pendingQuote = '';
+
+        // ==================== TEXT SCRAMBLE CLASS ====================
+        class TextScramble {
+            constructor(el) {
+                this.el = el;
+                this.chars = '!<>-_\\/[]{}—=+*^?#________';
+                this.update = this.update.bind(this);
+                this.colorMap = null; // For preserving colors
+            }
+            setText(newText, colorMap = null) {
+                // colorMap is an array of {start, end, color} for coloring specific ranges
+                this.colorMap = colorMap;
+                const oldText = this.el.innerText;
+                const length = Math.max(oldText.length, newText.length);
+                const promise = new Promise((resolve) => this.resolve = resolve);
+                this.queue = [];
+                for (let i = 0; i < length; i++) {
+                    const from = oldText[i] || '';
+                    const to = newText[i] || '';
+                    const start = Math.floor(Math.random() * 20);
+                    const end = start + Math.floor(Math.random() * 20);
+                    this.queue.push({ from, to, start, end });
+                }
+                cancelAnimationFrame(this.frameRequest);
+                this.frame = 0;
+                this.update();
+                return promise;
+            }
+            getColorForIndex(index) {
+                if (!this.colorMap) return 'var(--text-brown)';
+                for (const range of this.colorMap) {
+                    if (index >= range.start && index < range.end) {
+                        return range.color;
+                    }
+                }
+                return 'var(--text-brown)';
+            }
+            update() {
+                let output = '';
+                let complete = 0;
+                for (let i = 0, n = this.queue.length; i < n; i++) {
+                    let { from, to, start, end, char } = this.queue[i];
+                    const color = this.getColorForIndex(i);
+                    if (this.frame >= end) {
+                        complete++;
+                        output += `<span style="color: ${color};">${to}</span>`;
+                    } else if (this.frame >= start) {
+                        if (!char || Math.random() < 0.28) {
+                            char = this.randomChar();
+                            this.queue[i].char = char;
+                        }
+                        output += `<span style="color: ${color}; opacity: 0.5;">${char}</span>`;
+                    } else {
+                        output += `<span style="color: ${color};">${from}</span>`;
+                    }
+                }
+                this.el.innerHTML = output;
+                if (complete === this.queue.length) {
+                    this.resolve();
+                } else {
+                    this.frameRequest = requestAnimationFrame(this.update);
+                    this.frame++;
+                }
+            }
+            randomChar() {
+                return this.chars[Math.floor(Math.random() * this.chars.length)];
+            }
+        }
+
+        // ==================== DOM ELEMENTS ====================
+        const $ = id => document.getElementById(id);
+
+        const screens = {
+            onboarding1: $('onboarding-1'),
+            onboarding2: $('onboarding-2'),
+            onboarding3: $('onboarding-3'),
+            loading: $('loading-screen'),
+            main: $('main-screen'),
+            sport: $('sport-screen'),
+            location: $('location-screen')
+        };
+
+        const el = {
+            lfgBtn: $('lfg-btn'),
+            locationHintBtn: $('location-hint-btn'),
+            sportBtn: $('sport-btn'),
+            locationBtn: $('location-btn'),
+            closeSportBtn: $('close-sport-btn'),
+            closeLocationBtn: $('close-location-btn'),
+            cancelLocationBtn: $('cancel-location'),
+            confirmLocationBtn: $('confirm-location-btn'),
+            currentSportIcon: $('current-sport-icon'),
+            quoteContainer: $('quote-container'),
+            quoteText: $('quote-text'),
+            quoteHint: $('quote-hint'),
+            locationInput: $('location-input'),
+            clearLocationBtn: $('clear-location'),
+            locationSuggestions: $('location-suggestions'),
+            locationStatus: $('location-status'),
+            useCurrentLocation: $('use-current-location'),
+            loadingGradient: $('loading-gradient'),
+            loadingBalls: $('loading-balls'),
+            loadingQuoteText: $('loading-quote-text'),
+            modalOverlay: $('modal-overlay'),
+            recentHeader: $('recent-header')
+        };
+
+        // ==================== FALLBACK QUOTES ====================
+        const fallbackQuotes = {
+            basketball: `"Too many sportsguys talking sports right now. Check back later!"`,
+            baseball: `"Too many sportsguys talking sports right now. Check back later!"`,
+            football: `"Too many sportsguys talking sports right now. Check back later!"`,
+            soccer: `"Too many sportsguys talking sports right now. Check back later!"`,
+            golf: `"Too many sportsguys talking sports right now. Check back later!"`,
+            tennis: `"Too many sportsguys talking sports right now. Check back later!"`,
+        };
+
+        // ==================== UTILITIES ====================
+        const delay = ms => new Promise(r => setTimeout(r, ms));
+
+        function showScreen(name) {
+            Object.values(screens).forEach(s => s?.classList.remove('active'));
+            screens[name]?.classList.add('active');
+        }
+
+        // ==================== SEASONAL SPORT ====================
+        function getSeasonalSport() {
+            const month = new Date().getMonth();
+            if (month >= 8 || month <= 1) return { sport: 'football', icon: 'icons/Football.png' };
+            if (month >= 2 && month <= 5) return { sport: 'basketball', icon: 'icons/Basketball.png' };
+            return { sport: 'baseball', icon: 'icons/Baseball.png' };
+        }
+
+        function initializeSport() {
+            const seasonal = getSeasonalSport();
+            currentSport = seasonal.sport;
+            currentIcon = seasonal.icon;
+            el.currentSportIcon.src = currentIcon;
+            document.querySelectorAll('.sport-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.sport === currentSport);
+            });
+        }
+
+        // ==================== LOCATION ====================
+        function showLocationModal(isOnboarding = false) {
+            screens.location.classList.add('active');
+            el.modalOverlay.classList.add('active');
+            screens.location.dataset.isOnboarding = isOnboarding;
+            el.locationInput.value = '';
+            el.clearLocationBtn.classList.remove('visible');
+            el.confirmLocationBtn.textContent = isOnboarding ? 'Continue' : 'Set Location';
+            updateLocationSuggestions();
+            
+            // Blur the quote content if not onboarding
+            if (!isOnboarding && el.quoteContainer) {
+                el.quoteContainer.classList.add('blurred');
+            }
+            
+            // Scramble logo to "YOUR LOCATION" (only if not onboarding - logo not visible then)
+            if (!isOnboarding) {
+                scrambleToText('YOUR LOCATION');
+            }
+        }
+
+        function hideLocationModal() {
+            screens.location.classList.remove('active');
+            el.modalOverlay.classList.remove('active');
+            
+            // Unblur the quote content
+            if (el.quoteContainer) {
+                el.quoteContainer.classList.remove('blurred');
+            }
+            
+            // Scramble back to "SPORTSGUY"
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            if (!isOnboarding) {
+                scrambleToText('SPORTSGUY');
+            }
+        }
+
+        function detectCurrentLocation() {
+            el.locationStatus.textContent = 'Detecting...';
+
+            if (!navigator.geolocation) {
+                el.locationStatus.textContent = 'Not supported. Enter manually.';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+                        const data = await res.json();
+                        const city = data.city || data.locality || 'Unknown';
+                        const state = data.principalSubdivision || '';
+                        const location = state ? `${city}, ${state}` : city;
+                        
+                        el.locationStatus.textContent = location;
+                        el.locationStatus.className = 'status-success';
+                        el.locationInput.value = location;
+                        el.confirmLocationBtn.disabled = false;
+                        el.clearLocationBtn.classList.add('visible');
+                    } catch {
+                        el.locationStatus.innerHTML = 'Unable to detect. <span class="retry-link">Retry?</span>';
+                    }
+                },
+                () => {
+                    el.locationStatus.innerHTML = 'Access denied. <span class="retry-link">Retry?</span>';
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        function updateLocationSuggestions() {
+            el.locationSuggestions.innerHTML = '';
+            if (recentLocations.length > 0) {
+                el.recentHeader.style.display = 'block';
+                recentLocations.forEach(loc => {
+                    const li = document.createElement('li');
+                    li.className = 'location-item';
+                    li.textContent = loc;
+                    el.locationSuggestions.appendChild(li);
+                });
+            } else {
+                el.recentHeader.style.display = 'none';
+            }
+        }
+
+        function saveRecentLocation(location) {
+            if (!location) return;
+            recentLocations = recentLocations.filter(l => l !== location);
+            recentLocations.unshift(location);
+            recentLocations = recentLocations.slice(0, 5);
+            localStorage.setItem('sportsguy_recent_locations', JSON.stringify(recentLocations));
+        }
+
+        function selectLocation(location) {
+            if (!location) return;
+            currentLocation = location;
+            saveRecentLocation(location);
+            
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            
+            if (isOnboarding) {
+                startLoadingSequence();
+            } else {
+                generateQuote();
+            }
+        }
+
+        // ==================== LOADING SEQUENCE ====================
+        const loadingMessages = {
+            football: [
+                "Checking if his toe was on the line from 47 angles...",
+                "Reviewing that catch for the 1,000th time...",
+                "Texting Bill Belichick for insider info...",
+                "Watching all 22 camera angles now...",
+                "Arguing about who the GOAT quarterback is...",
+                "Analyzing the third-string left guard's footwork...",
+                "Checking if that was roughing the passer or not...",
+                "Rewinding that Hail Mary in slow motion...",
+                "Debating if they should've run the ball...",
+                "Looking up obscure tiebreaker rules...",
+            ],
+            basketball: [
+                "Analyzing Steph's shooting form frame by frame...",
+                "Checking if that was actually a travel...",
+                "Rewinding LeBron's postgame interview...",
+                "Counting how many times they said 'at the rim'...",
+                "Debating who deserves the MVP this year...",
+                "Watching that ankle-breaker crossover again...",
+                "Studying the pick-and-roll execution...",
+                "Checking the plus-minus stats obsessively...",
+                "Analyzing that poster dunk from every angle...",
+                "Reviewing the last two minutes report...",
+            ],
+            baseball: [
+                "Buying peanuts and cracker jacks...",
+                "Checking the spin rate on that curveball...",
+                "Reviewing the pitch sequence from the 7th...",
+                "Watching that diving catch one more time...",
+                "Analyzing launch angle and exit velocity...",
+                "Arguing about the designated hitter rule...",
+                "Checking if the shift should be banned...",
+                "Rewinding that bang-bang play at first...",
+                "Looking up obscure batting average stats...",
+                "Debating if that was a balk or not...",
+            ],
+            soccer: [
+                "Checking VAR from every possible angle...",
+                "Rewatching that offside call 50 times...",
+                "Analyzing the buildup to that goal...",
+                "Calculating expected goals like a nerd...",
+                "Debating if that was a dive or not...",
+                "Watching that bicycle kick on repeat...",
+                "Checking if the ball fully crossed the line...",
+                "Analyzing the goalkeeper's positioning...",
+                "Studying the formation and tactics...",
+                "Arguing about who's the best midfielder...",
+            ],
+            tennis: [
+                "Watching that Hawkeye replay again...",
+                "Analyzing the serve speed data...",
+                "Checking if that was really out...",
+                "Counting unforced errors like a maniac...",
+                "Studying the spin on that backhand...",
+                "Debating if clay or grass is better...",
+                "Watching that drop shot in slow-mo...",
+                "Checking the first serve percentage...",
+                "Analyzing the tiebreak point by point...",
+                "Rewinding that incredible rally...",
+            ],
+            golf: [
+                "Reading the green from satellite imagery...",
+                "Checking wind speed at the 14th hole...",
+                "Analyzing that swing in slow-mo...",
+                "Watching them line up that putt forever...",
+                "Calculating the break on this 30-footer...",
+                "Checking if that was a one-club or two-club wind...",
+                "Analyzing the divot pattern for clues...",
+                "Studying the course management strategy...",
+                "Watching that chip shot roll toward the cup...",
+                "Debating driver vs. 3-wood off the tee...",
+            ],
+            general: [
+                "Watching all the sports now...",
+                "Texting Joe Buck for the inside scoop...",
+                "Checking the monitors...",
+                "Getting the insider take...",
+                "Consulting the sports gods...",
+                "Running the numbers...",
+                "Asking the experts...",
+                "Reviewing the tape...",
+                "Crunching the stats...",
+                "Channeling our inner sports genius...",
+            ]
+        };
+
+        function getRandomLoadingMessage(sport) {
+            const sportMessages = loadingMessages[sport] || loadingMessages.general;
+            return sportMessages[Math.floor(Math.random() * sportMessages.length)];
+        }
+
+        async function startLoadingSequence() {
+            // Show "hell yea! SPORTS." briefly
+            showScreen('onboarding3');
+            await delay(1500);
+
+            // Transition to loading screen and update the sport icon
+            const loadingSportIcon = document.getElementById('loading-sport-icon');
+            if (loadingSportIcon) {
+                loadingSportIcon.src = currentIcon || 'icons/Basketball.png';
+            }
+            showScreen('loading');
+
+            // Start fetching quote in background
+            const quotePromise = fetchQuote();
+
+            // Fade in gradient
+            await delay(300);
+            el.loadingGradient.classList.add('visible');
+
+            // Show and spin balls with initial message
+            await delay(800);
+            el.loadingBalls.classList.add('visible', 'spinning');
+            el.loadingQuoteText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
+            el.loadingQuoteText.classList.add('visible');
+
+            // Cycle through messages while loading
+            const messageInterval = setInterval(() => {
+                el.loadingQuoteText.style.opacity = '0';
+                setTimeout(() => {
+                    el.loadingQuoteText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
+                    el.loadingQuoteText.style.opacity = '1';
+                }, 400);
+            }, 2500);
+
+            // Wait for quote to be ready
+            pendingQuote = await quotePromise;
+
+            // Let it spin for a bit more
+            await delay(2000);
+
+            // Stop cycling messages
+            clearInterval(messageInterval);
+
+            // Explode balls outward
+            el.loadingBalls.classList.add('explode');
+            el.loadingQuoteText.classList.remove('visible');
+            el.loadingGradient.classList.remove('visible');
+
+            await delay(1200);
+
+            // Show main screen with the quote
+            completeOnboarding();
+        }
+
+        function completeOnboarding() {
+            localStorage.setItem('sportsguy_onboarded', 'true');
+            hasCompletedOnboarding = true;
+            
+            el.quoteText.textContent = pendingQuote;
+            showScreen('main');
+            
+            el.quoteContainer.classList.add('revealing');
+            setTimeout(() => el.quoteContainer.classList.remove('revealing'), 1500);
+            setTimeout(() => el.quoteHint.classList.add('visible'), 3000);
+        }
+
+        // ==================== QUOTE GENERATION ====================
+        async function fetchQuote() {
+            try {
+                console.log('Fetching quote for:', { sport: currentSport, location: currentLocation });
+                
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sport: currentSport, location: currentLocation }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.error) {
+                    console.error('API Error:', data.error);
+                    throw new Error(data.error);
+                }
+                
+                return data.quote;
+            } catch (error) {
+                console.error('Fetch error:', error);
+                // Show error in console with details
+                console.error('Failed for:', { sport: currentSport, location: currentLocation });
+                
+                // Return error message so user knows something went wrong
+                if (error.name === 'AbortError') {
+                    return `"Sorry, that took too long. Tap to try again!"`;
+                }
+                
+                // Return fallback quote
+                return fallbackQuotes[currentSport] || fallbackQuotes.basketball;
+            }
+        }
+
+        async function generateQuote() {
+            // Show mini loading state
+            el.quoteContainer.classList.add('loading');
+            el.quoteHint.classList.remove('visible');
+            
+            // Show the loading overlay with spinning balls
+            showMiniLoader();
+            
+            const quote = await fetchQuote();
+            
+            // Hide loader and show quote
+            hideMiniLoader();
+            el.quoteText.textContent = quote;
+            el.quoteContainer.classList.remove('loading');
+            el.quoteContainer.classList.add('revealing');
+            
+            setTimeout(() => {
+                el.quoteContainer.classList.remove('revealing');
+                el.quoteHint.classList.add('visible');
+            }, 1500);
+        }
+
+        let miniLoaderMessageInterval = null;
+
+        function showMiniLoader() {
+            // Create mini loader if doesn't exist
+            if (!document.getElementById('mini-loader')) {
+                const loader = document.createElement('div');
+                loader.id = 'mini-loader';
+                loader.innerHTML = `
+                    <div class="mini-loader-gradient"></div>
+                    <div class="mini-loader-balls">
+                        <img src="icons/Basketball.png" alt="">
+                        <img src="icons/Football.png" alt="">
+                        <img src="icons/Tennis.png" alt="">
+                        <img src="icons/Soccer.png" alt="">
+                        <img src="icons/Golf.png" alt="">
+                        <img src="icons/Baseball.png" alt="">
+                    </div>
+                    <p class="mini-loader-text"></p>
+                `;
+                document.getElementById('main-screen').appendChild(loader);
+            }
+            
+            const loader = document.getElementById('mini-loader');
+            const loaderText = loader.querySelector('.mini-loader-text');
+            loaderText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
+            
+            loader.classList.add('visible');
+            setTimeout(() => loader.querySelector('.mini-loader-balls').classList.add('spinning'), 100);
+            
+            // Cycle messages
+            miniLoaderMessageInterval = setInterval(() => {
+                loaderText.style.opacity = '0';
+                setTimeout(() => {
+                    loaderText.textContent = `"${getRandomLoadingMessage(currentSport)}"`;
+                    loaderText.style.opacity = '1';
+                }, 300);
+            }, 2000);
+        }
+
+        function hideMiniLoader() {
+            if (miniLoaderMessageInterval) {
+                clearInterval(miniLoaderMessageInterval);
+                miniLoaderMessageInterval = null;
+            }
+            
+            const loader = document.getElementById('mini-loader');
+            if (loader) {
+                loader.querySelector('.mini-loader-balls').classList.add('explode');
+                setTimeout(() => {
+                    loader.classList.remove('visible');
+                    loader.querySelector('.mini-loader-balls').classList.remove('spinning', 'explode');
+                }, 600);
+            }
+        }
+
+        // ==================== SPORT SELECTION ====================
+        // Text scramble instance for logo
+        let logoScramble = null;
+        const logoOriginalHTML = '<span class="text-green">SPORTS</span><span class="text-blue">GUY</span>';
+        
+        // Color maps for different texts (green first word, blue second word)
+        const colorMaps = {
+            'SPORTSGUY': [
+                { start: 0, end: 6, color: 'var(--green)' },  // SPORTS
+                { start: 6, end: 9, color: 'var(--blue)' }    // GUY
+            ],
+            'CHOOSE SPORT': [
+                { start: 0, end: 6, color: 'var(--green)' },  // CHOOSE
+                { start: 6, end: 7, color: 'var(--green)' },  // space
+                { start: 7, end: 12, color: 'var(--blue)' }   // SPORT
+            ],
+            'YOUR LOCATION': [
+                { start: 0, end: 4, color: 'var(--green)' },  // YOUR
+                { start: 4, end: 5, color: 'var(--green)' },  // space
+                { start: 5, end: 13, color: 'var(--blue)' }   // LOCATION
+            ]
+        };
+
+        function scrambleToText(text) {
+            const logoText = document.getElementById('logo-text');
+            if (!logoText) return;
+            
+            if (!logoScramble) {
+                logoScramble = new TextScramble(logoText);
+            }
+            
+            const colorMap = colorMaps[text] || null;
+            logoScramble.setText(text, colorMap);
+        }
+
+        function showSportModal() {
+            screens.sport.classList.add('active');
+            el.modalOverlay.classList.add('active');
+            // Blur the quote content
+            el.quoteContainer.classList.add('blurred');
+            // Scramble logo to "CHOOSE SPORT"
+            scrambleToText('CHOOSE SPORT');
+        }
+
+        function hideSportModal() {
+            screens.sport.classList.remove('active');
+            el.modalOverlay.classList.remove('active');
+            // Unblur the quote content
+            el.quoteContainer.classList.remove('blurred');
+            // Scramble back to "SPORTSGUY"
+            scrambleToText('SPORTSGUY');
+        }
+
+        // Easter egg - scramble logo text when clicked
+        function scrambleLogoEasterEgg() {
+            const logoText = document.getElementById('logo-text');
+            if (!logoText) return;
+            
+            if (!logoScramble) {
+                logoScramble = new TextScramble(logoText);
+            }
+            
+            const phrases = [
+                { text: 'LETS GO!', colors: [{ start: 0, end: 4, color: 'var(--green)' }, { start: 4, end: 8, color: 'var(--blue)' }] },
+                { text: 'GAME TIME', colors: [{ start: 0, end: 4, color: 'var(--green)' }, { start: 4, end: 9, color: 'var(--blue)' }] },
+                { text: 'BIG PLAY!', colors: [{ start: 0, end: 3, color: 'var(--green)' }, { start: 3, end: 9, color: 'var(--blue)' }] },
+                { text: 'SPORTSGUY', colors: colorMaps['SPORTSGUY'] }
+            ];
+            let i = 0;
+            
+            const next = () => {
+                if (i < phrases.length) {
+                    logoScramble.setText(phrases[i].text, phrases[i].colors).then(() => {
+                        i++;
+                        if (i < phrases.length) {
+                            setTimeout(next, 800);
+                        }
+                    });
+                }
+            };
+            next();
+        }
+
+        function selectSport(sport, icon) {
+            currentSport = sport;
+            currentIcon = icon;
+            el.currentSportIcon.src = icon;
+            document.querySelectorAll('.sport-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.sport === sport);
+            });
+            hideSportModal();
+            generateQuote();
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        // Onboarding
+        el.lfgBtn.addEventListener('click', () => showScreen('onboarding2'));
+        
+        // Location hint button - user must tap this to proceed
+        el.locationHintBtn.addEventListener('click', () => showLocationModal(true));
+
+        // Location modal
+        el.useCurrentLocation.addEventListener('click', detectCurrentLocation);
+        
+        // Debounce timer for autocomplete
+        let autocompleteTimer = null;
+        
+        el.locationInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            const hasValue = value.length > 0;
+            el.clearLocationBtn.classList.toggle('visible', hasValue);
+            el.confirmLocationBtn.disabled = !hasValue;
+            
+            // Clear previous timer
+            if (autocompleteTimer) clearTimeout(autocompleteTimer);
+            
+            // Autocomplete after 500ms of no typing
+            if (value.length >= 3) {
+                autocompleteTimer = setTimeout(() => lookupLocation(value), 500);
+            }
+        });
+
+        // Lookup location (handles zip codes and city names)
+        async function lookupLocation(query) {
+            try {
+                // Check if it's a zip code (5 digits)
+                const isZipCode = /^\d{5}$/.test(query.trim());
+                
+                if (isZipCode) {
+                    // Use Zippopotam.us for zip code lookup (free, no API key)
+                    const response = await fetch(`https://api.zippopotam.us/us/${query.trim()}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const place = data.places[0];
+                        const cityState = `${place['place name']}, ${place['state abbreviation']}`;
+                        
+                        // Show as suggestion
+                        showAutocompleteSuggestions([{ city: cityState, zip: query.trim() }]);
+                    } else {
+                        showAutocompleteSuggestions([]);
+                    }
+                } else {
+                    showAutocompleteSuggestions([]);
+                }
+            } catch (error) {
+                console.log('Location lookup error:', error);
+                showAutocompleteSuggestions([]);
+            }
+        }
+        
+        function showAutocompleteSuggestions(suggestions) {
+            // Get or create dropdown
+            let dropdown = document.getElementById('autocomplete-dropdown');
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = 'autocomplete-dropdown';
+                dropdown.className = 'autocomplete-dropdown';
+                // Insert after search bar
+                const searchBar = document.querySelector('.search-bar');
+                searchBar.parentNode.insertBefore(dropdown, searchBar.nextSibling);
+            }
+            
+            // Clear and populate
+            dropdown.innerHTML = '';
+            
+            if (suggestions.length > 0) {
+                suggestions.forEach(suggestion => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.innerHTML = `
+                        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <span>${suggestion.city}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        el.locationInput.value = suggestion.city;
+                        el.confirmLocationBtn.disabled = false;
+                        el.clearLocationBtn.classList.add('visible');
+                        dropdown.classList.remove('visible');
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.classList.add('visible');
+            } else {
+                dropdown.classList.remove('visible');
+            }
+        }
+
+        el.locationInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value) {
+                handleLocationSubmit(e.target.value);
+            }
+        });
+
+        el.clearLocationBtn.addEventListener('click', () => {
+            el.locationInput.value = '';
+            el.clearLocationBtn.classList.remove('visible');
+            el.confirmLocationBtn.disabled = true;
+            el.locationInput.focus();
+        });
+
+        el.cancelLocationBtn.addEventListener('click', () => {
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            if (isOnboarding) showScreen('onboarding2');
+        });
+
+        el.confirmLocationBtn.addEventListener('click', () => {
+            const location = el.locationInput.value.trim();
+            if (location) handleLocationSubmit(location);
+        });
+        
+        // Handle location submission - convert zip if needed
+        async function handleLocationSubmit(input) {
+            let location = input.trim();
+            
+            // If it's a zip code, convert to city name first
+            if (/^\d{5}$/.test(location)) {
+                try {
+                    const response = await fetch(`https://api.zippopotam.us/us/${location}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const place = data.places[0];
+                        location = `${place['place name']}, ${place['state abbreviation']}`;
+                    }
+                } catch (error) {
+                    console.log('Zip lookup failed, using as-is');
+                }
+            }
+            
+            selectLocation(location);
+        }
+
+        el.closeLocationBtn.addEventListener('click', () => {
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            hideLocationModal();
+            if (isOnboarding) showScreen('onboarding2');
+        });
+
+        el.locationSuggestions.addEventListener('click', (e) => {
+            if (e.target.classList.contains('location-item')) {
+                el.locationInput.value = e.target.textContent;
+                el.confirmLocationBtn.disabled = false;
+                el.clearLocationBtn.classList.add('visible');
+            }
+        });
+
+        // Sport modal
+        el.sportBtn.addEventListener('click', showSportModal);
+        el.closeSportBtn.addEventListener('click', hideSportModal);
+
+        document.querySelectorAll('.sport-card').forEach(card => {
+            card.addEventListener('click', () => selectSport(card.dataset.sport, card.dataset.icon));
+        });
+
+        // Main screen
+        el.locationBtn.addEventListener('click', () => showLocationModal(false));
+        el.quoteContainer.addEventListener('click', generateQuote);
+        
+        // Logo easter egg - scramble text when clicked
+        const mainLogo = document.getElementById('main-logo');
+        if (mainLogo) {
+            mainLogo.addEventListener('click', scrambleLogoEasterEgg);
+            mainLogo.style.cursor = 'pointer';
+        }
+
+        // Modal overlay
+        el.modalOverlay.addEventListener('click', () => {
+            hideSportModal();
+            const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+            if (!isOnboarding) hideLocationModal();
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideSportModal();
+                const isOnboarding = screens.location.dataset.isOnboarding === 'true';
+                if (!isOnboarding) hideLocationModal();
+            }
+        });
+
+        // ==================== INIT ====================
+        // Add ?reset to URL to clear onboarding and test again
+        if (window.location.search.includes('reset')) {
+            localStorage.removeItem('sportsguy_onboarded');
+            localStorage.removeItem('sportsguy_recent_locations');
+            hasCompletedOnboarding = false;
+            recentLocations = [];
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        function init() {
+            try {
+                initializeSport();
+                
+                // Check if we have valid saved state
+                const hasValidState = hasCompletedOnboarding && 
+                                      recentLocations.length > 0 && 
+                                      recentLocations[0] && 
+                                      recentLocations[0].trim() !== '';
+                
+                if (hasValidState) {
+                    currentLocation = recentLocations[0];
+                    showScreen('main');
+                    // Small delay to ensure DOM is ready
+                    setTimeout(() => generateQuote(), 100);
+                } else {
+                    // Reset and show onboarding
+                    hasCompletedOnboarding = false;
+                    localStorage.removeItem('sportsguy_onboarded');
+                    showScreen('onboarding1');
+                }
+            } catch (error) {
+                console.error('Init error:', error);
+                // On any error, reset to clean state
+                localStorage.removeItem('sportsguy_onboarded');
+                localStorage.removeItem('sportsguy_recent_locations');
+                showScreen('onboarding1');
+            }
+        }
+
+        // Wait for DOM to be fully ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+    
+    <!-- Vercel Web Analytics -->
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
