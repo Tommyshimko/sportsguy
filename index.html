@@ -135,7 +135,7 @@
             font-family: 'Anton', sans-serif;
             font-size: 1.125rem;
             font-weight: 400;
-            color: var(--text-brown);
+            color: var(--blue);
             cursor: pointer;
             box-shadow: var(--shadow);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -189,8 +189,8 @@
         /* Arrow pointing to location - using PNG image */
         .arrow-container {
             position: absolute;
-            top: 68px;
-            right: 72px;
+            top: 45px;
+            right: 85px;
             width: 100px;
             height: 160px;
         }
@@ -853,17 +853,17 @@
             bottom: 40px;
             left: 20px;
             right: 20px;
-            background: var(--green);
+            background: var(--card-bg);
             border: none;
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 18px 32px;
             font-family: 'Anton', sans-serif;
             font-size: 1.125rem;
             font-weight: 400;
-            color: white;
+            color: var(--blue);
             cursor: pointer;
-            box-shadow: var(--shadow-lg);
-            transition: transform 0.2s ease, opacity 0.2s ease;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             z-index: 102;
@@ -871,6 +871,7 @@
 
         .confirm-location-btn:hover {
             transform: scale(1.02);
+            box-shadow: var(--shadow-lg);
         }
 
         .confirm-location-btn:active {
@@ -914,7 +915,7 @@
     <!-- Onboarding Screen 1: Welcome -->
     <div id="onboarding-1" class="screen onboarding-screen active">
         <div class="onboarding-content">
-            <span class="onboarding-title-serif">Want to be a</span>
+            <span class="onboarding-title-serif">Want to sound like a</span>
             <div class="onboarding-title-sans">
                 <span class="text-green">SPORTS</span><span class="text-blue">GUY?</span>
             </div>
@@ -1486,10 +1487,15 @@
         function completeOnboarding() {
             localStorage.setItem('sportsguy_onboarded', 'true');
             hasCompletedOnboarding = true;
-            
+
             el.quoteText.textContent = pendingQuote;
             showScreen('main');
-            
+
+            // Start the logo scramble effect on first load
+            setTimeout(() => {
+                scrambleLogoEasterEgg();
+            }, 500);
+
             el.quoteContainer.classList.add('revealing');
             setTimeout(() => el.quoteContainer.classList.remove('revealing'), 1500);
             setTimeout(() => el.quoteHint.classList.add('visible'), 3000);
