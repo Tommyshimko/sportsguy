@@ -426,6 +426,15 @@
             font-style: normal;
             line-height: 1.45;
             color: var(--text-brown);
+            max-width: 100%;
+        }
+
+        /* Desktop: Limit quote width for better readability */
+        @media (min-width: 768px) {
+            .quote {
+                max-width: 480px;
+                margin: 0 auto;
+            }
         }
 
         .quote-hint {
