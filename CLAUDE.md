@@ -9,7 +9,7 @@ SportsGuy is a mobile-first web app that generates casual sports bar commentary 
 
 ## Tech Stack
 - **Frontend:** Single-page HTML/CSS/JS (no framework)
-- **API:** Claude API with web search for generating quotes
+- **API:** Vercel function using the Anthropic SDK (Claude Sonnet 5 + web search)
 - **Hosting:** Vercel
 - **Version Control:** Git + GitHub
 
@@ -24,6 +24,17 @@ sportsguy/
     ├── Arrow.png       # Navigation arrow
     └── [sport-balls]   # Baseball, Basketball, Golf, etc.
 ```
+
+## Take Generator (api/generate.js)
+Rebuilt Sept 2026 after a full QA. How it works, in order:
+1. **Shared pool** - up to 4 takes per sport + city are kept for 3 hours (Vercel Runtime Cache). The app sends `{sport, location, n}`; `n` is which take it wants (a tap asks for the next one). Pool hits are free and instant.
+2. **New take** (~5c, ~6s) - Claude Sonnet 5 + web search. The prompt makes it search by date for the actual game, copy out its evidence sentences first, then write the take using only those facts.
+3. **Hard checks in code** - any number in the take must appear in the evidence or the take is thrown away; "tonight / last night" are rewritten to real weekdays; over 45 words is rejected; one automatic retry.
+4. **Limits** - `DAILY_TAKE_LIMIT` env (default 150 paid takes/day), 12/hour per IP, only sportsguy.xyz may call it from a browser.
+
+**Voice rules** (in the prompt): ~20 words, everyday words a non-fan can say, one team, at most one player, no stats or slang, no dashes, ends on a simple opinion.
+
+**QA** - `node qa/run.mjs qa/out.json` runs the real generator over 6 sports x 4 cities and records sources; `python3 qa/style.py qa/out.json` scores length and plain language. Needs `CLAUDE_API_KEY` in the environment (`vercel env pull`, delete the file after). Costs about $1.30 a round. Fact-check baseball against statsapi.mlb.com. Re-run this after ANY prompt change.
 
 ## Design System
 
