@@ -219,11 +219,12 @@ export default async function handler(req, res) {
   const pool = await readPool(cache, poolKey);
 
   // Already have this take (or the pool is full) - free, no API call
+  // `more` tells the app whether another tap can turn up something new
   if (n < pool.length) {
-    return res.status(200).json({ quote: pool[n], cached: true });
+    return res.status(200).json({ quote: pool[n], cached: true, more: n + 1 < POOL_MAX });
   }
   if (pool.length >= POOL_MAX) {
-    return res.status(200).json({ quote: pool[n % pool.length], cached: true });
+    return res.status(200).json({ quote: pool[n % pool.length], cached: true, more: false });
   }
 
   // A new take costs money - check the limits first
@@ -237,7 +238,7 @@ export default async function handler(req, res) {
   if (dayCount >= DAILY_LIMIT || ipCount >= IP_HOURLY_LIMIT) {
     console.warn('Limit hit', { dayCount, ipCount, ip });
     if (pool.length) {
-      return res.status(200).json({ quote: pool[n % pool.length], cached: true });
+      return res.status(200).json({ quote: pool[n % pool.length], cached: true, more: false });
     }
     return res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
   }
@@ -262,7 +263,7 @@ export default async function handler(req, res) {
     // Re-read so two people generating at once don't overwrite each other
     await addToPool(cache, poolKey, quote);
 
-    return res.status(200).json({ quote, cached: false });
+    return res.status(200).json({ quote, cached: false, more: n + 1 < POOL_MAX });
 
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
