@@ -102,7 +102,7 @@ async function generateTake(client, sport, location, usedTakes) {
 
 Search the web for what is happening right now with the local ${league} team or players for ${location} - last night's game, today's matchup, a trade, an injury, a streak, the standings. If the league is in its offseason, use the freshest offseason storyline instead (draft, signings, trades, training camp). Everything you mention must come from the last week or so of search results, never from memory, because rosters and records change constantly.
 
-Then write exactly one take: what a real local fan would say out loud at the bar tonight. Casual, opinionated, specific - name a player or a score. Two sentences at most.
+Then write exactly one take: what a real local fan would say out loud at the bar tonight. Casual, opinionated, specific - name a player or a score. Two short sentences at most, under 40 words total, easy to say out loud in one breath. Only use names and numbers you saw in the search results; if you're unsure of one, leave it out.
 
 Your reply is shown directly on the person's screen, so reply with only the take itself wrapped in double quotes - no lead-in, no mention of searching, no sources. If the search turns up nothing current enough to build a take on, reply with exactly NO_TAKE instead.`;
 
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
   }
 
   const cache = getCache({ namespace: 'sportsguy' });
-  const poolKey = `takes:${sport}:${location.toLowerCase()}`;
+  const poolKey = `takes:v2:${sport}:${location.toLowerCase()}`;
   const pool = await readPool(cache, poolKey);
 
   // Already have this take (or the pool is full) - free, no API call
