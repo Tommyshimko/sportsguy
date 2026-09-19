@@ -62,53 +62,97 @@ async function addToPool(cache, key, quote) {
   await cache.set(key, { created, takes: [...takes, quote] }, { ttl, name: 'take-pool' });
 }
 
-// Only the text written after the last search is the take itself -
-// anything before it is the model narrating its search.
-function extractQuote(content) {
-  let lastSearch = -1;
-  content.forEach((block, i) => {
-    if (block.type === 'web_search_tool_result') lastSearch = i;
-  });
+// The model replies as <evidence>...</evidence><take>...</take>. Only the take is shown;
+// the evidence is what it copied from its sources, kept for logs and QA.
+export function parseReply(content) {
+  const text = content.filter(block => block.type === 'text').map(block => block.text).join('');
+  const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/i)?.[1] || '').trim();
+  // The closing tag is sometimes cut off, so don't require it
+  let quote = (text.match(/<take>([\s\S]*?)(?:<\/take|$)/i)?.[1] || '').trim();
 
-  let quote = content
-    .slice(lastSearch + 1)
-    .filter(block => block.type === 'text')
-    .map(block => block.text)
-    .join('')
-    .trim();
+  // Straight quotes only, no wrapping quotes, and nothing that's awkward to say out loud
+  quote = quote.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/^"+|"+$/g, '');
+  quote = quote.replace(/\s*[—–]\s*/g, ', ').replace(/\s+/g, ' ').trim();
 
-  // Normalize to exactly one pair of straight quote marks
-  quote = quote.replace(/[“”]/g, '"').replace(/^"+|"+$/g, '').trim();
+  // Relative days go stale while a take sits in the pool - pin them to real weekdays
+  const dayName = offset => new Date(Date.now() + offset * 86400000)
+    .toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
+  quote = quote
+    .replace(/\blast night\b/gi, `${dayName(-1)} night`)
+    .replace(/\btonight\b/gi, `${dayName(0)} night`)
+    .replace(/\byesterday\b/gi, dayName(-1))
+    .replace(/\btomorrow\b/gi, dayName(1));
 
-  // Sometimes it answers with two separately-quoted takes - join them, then hold it to two sentences
-  quote = quote.replace(/"\s+"/g, ' ');
-  const sentences = quote.match(/[^.!?]+[.!?]+(?=\s|$)/g);
-  if (sentences && sentences.length > 2) quote = sentences.slice(0, 2).join('').trim();
+  // Every number said out loud has to come from the sources, or the take is thrown away
+  const evidenceNumbers = new Set(evidence.match(/\d+/g) || []);
+  // (\b...\b skips team names like 49ers and 76ers)
+  const unsourced = (quote.match(/\b\d+\b/g) || []).filter(number => !evidenceNumbers.has(number));
+  if (unsourced.length) {
+    console.warn('Dropped take with unsourced numbers', { quote, unsourced });
+    return null;
+  }
 
-  // The model apologizing or talking about its search is not a take - never show or save it
-  const notATake = /NO_TAKE|search limit|\b(I (wasn't|was not) able|(I|I'll|I will) (couldn't|could not|can't|cannot) (find|pull|search|confirm|confidently)|unable to (find|search|pull))\b/i;
-  if (quote.length < 10 || notATake.test(quote)) return null;
-  return `"${quote}"`;
+  const words = quote.split(' ').length;
+  if (!quote || /NO_TAKE/.test(quote) || words < 5 || words > 45) return null;
+  return { quote: `"${quote}"`, evidence };
 }
 
-async function generateTake(client, sport, location, usedTakes) {
+const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
+
+export async function generateTake(client, sport, location, usedTakes) {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     timeZone: 'America/New_York'
   });
 
-  const system = `You write sports bar talk for someone who doesn't follow sports but wants to sound like they do. Today is ${today}. They are in ${location}. The sport is ${sport} (${league}).
+  // Spell out the days around today so the model never has to work out a weekday itself
+  const calendar = [-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3].map(offset => {
+    const d = new Date(Date.now() + offset * 86400000);
+    const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+    return offset === 0 ? `${label} (today)` : label;
+  }).join(', ');
 
-Search the web for what is happening right now with the local ${league} team or players for ${location} - last night's game, today's matchup, a trade, an injury, a streak, the standings. If the league is in its offseason, use the freshest offseason storyline instead (draft, signings, trades, training camp). Everything you mention must come from the last week or so of search results, never from memory, because rosters and records change constantly.
+  const isTeamSport = TEAM_SPORTS.includes(sport);
+  const place = /^\d{5}$/.test(location) ? `US zip code ${location} (work out which city that is first)` : location;
+  const pickStory = isTeamSport
+    ? `Pick the one ${league} team most people in ${location} root for. If the area has two, pick one. If it has none, pick the nearest team locals follow. The whole take is about that one team.`
+    : `There is no home team in ${sport}, so use the biggest story on tour this week. Only make it local if a tour event is being played in or near ${location} within the next two weeks.`;
 
-Then write exactly one take: what a real local fan would say out loud at the bar tonight. Casual, opinionated, specific - name a player or a score. Two short sentences at most, under 40 words total, easy to say out loud in one breath. Only use names and numbers you saw in the search results; if you're unsure of one, leave it out.
+  const searchHow = isTeamSport
+    ? `Look for the most recent game or result itself, with a query like "New York Mets MLB score September 18 2026" or "New York Mets game recap", rather than general team news. Use the full team name and the league so you don't get a different team with the same nickname. Every search result shows how old its page is. When the season is on, rest the take only on pages from the last three days. In the offseason, use the newest real news you can find, or failing that the biggest move of this offseason.`
+    : `Look for this week's tournament with a query like "${sport} tournament this week leaderboard" or "${sport} news this week". Every search result shows how old its page is. Prefer pages from the last three days. If it is a quiet week, use the result of the most recent big tournament or the next big event coming up, and say when it was or will be.`;
 
-Your reply is shown directly on the person's screen, so reply with only the take itself wrapped in double quotes - no lead-in, no mention of searching, no sources. If the search turns up nothing current enough to build a take on, reply with exactly NO_TAKE instead.`;
+  const system = `You write one line of sports bar talk for someone who does not follow sports but wants to join the conversation. Today is ${today}. They are in ${place}. The sport is ${sport} (${league}).
+
+1. Pick the story. ${pickStory}
+
+2. Search by date. ${searchHow} Do not take recent results from undated pages, season roundups or Wikipedia, because those are often weeks behind and would make this person sound out of touch.
+
+3. Copy your evidence first. Before writing, copy out the one or two sentences from the search results that the take rests on, each with its page age. Then check them against each other: who won and who lost, the score, and what day it happened. If you cannot tell who won, or the pages disagree, leave that fact out. If a game or tournament is still being played, say it is still going rather than naming a winner. Use this calendar for weekdays: ${calendar}. One fact you are sure of beats three you are not. Every name, score, number and event in the take has to appear in the evidence you copied, spelled the same way. Do not add players, streaks, history or team line-ups from memory, since rosters change and memory is how mistakes get in. The opinion is yours. The facts are the sources'. Do not stretch them either: a one-shot lead is not running away with it, and being one game short of the playoff line is not being about to clinch. If you are not sure what a standings phrase means, leave it out. Only name the day something happened if the source gives the date. Only mention a player if the source makes clear he plays for this team right now, because a quote from a rival talking about the team is not a player on it. Never use a score from a game that was still being played when the page was written. If all you have is a page from the middle of a game, use your second search to find how it ended ("recap" or "final score"), and if you still can't, talk about something else.
+
+4. Write the take. It is what a local fan would say out loud at the bar, and the person saying it is not a fan, so it has to be easy to say and easy to understand:
+- One or two short sentences, about 20 words in total and never more than 25. Count them. Cut anything that is not needed.
+- Name the team. Mention at most one player.
+- Everyday words only. No insider slang or stat talk: say "home run" not "bomb", "losing streak" not "skid", "won it in the last inning" not "walk-off". No percentages, ratings, rankings points or playoff math. If a word would need explaining to someone who never watches ${sport}, do not use it.
+- At most one number besides a score.
+- Never write "last night", "tonight", "tomorrow" or "yesterday". Name the day instead ("Friday night"), since this may be read hours from now.
+- No dashes, semicolons or parentheses.
+- End on a simple opinion a fan would have.
+- Just say the take. Do not greet anyone, address the fans, or explain that there is no local team or event.
+- Keep it about the games: no politics, legal trouble or betting.
+
+Reply in exactly this format and nothing else:
+<evidence>
+- (page age) "sentence copied from the source"
+</evidence>
+<take>the take, without quote marks</take>
+
+If the search turns up nothing solid enough, reply with <take>NO_TAKE</take>.`;
 
   let userMessage = `Give me a fresh ${sport} take for ${location}.`;
   if (usedTakes.length) {
-    userMessage += `\n\nI've already used the takes below, so build this one on a different storyline. It should stand on its own - don't refer back to them:\n${usedTakes.map(t => `- ${t}`).join('\n')}`;
+    userMessage += `\n\nI've already used the takes below, so build this one on a different fact or storyline about the same team. It should stand on its own - don't refer back to them:\n${usedTakes.map(t => `- ${t}`).join('\n')}`;
   }
 
   const messages = [{ role: 'user', content: userMessage }];
@@ -133,7 +177,7 @@ Your reply is shown directly on the person's screen, so reply with only the take
   }
 
   if (response.stop_reason === 'refusal') return null;
-  return extractQuote(response.content);
+  return parseReply(response.content);
 }
 
 // ==================== HANDLER ====================
@@ -171,7 +215,7 @@ export default async function handler(req, res) {
   }
 
   const cache = getCache({ namespace: 'sportsguy' });
-  const poolKey = `takes:v2:${sport}:${location.toLowerCase()}`;
+  const poolKey = `takes:v9:${sport}:${location.toLowerCase()}`;
   const pool = await readPool(cache, poolKey);
 
   // Already have this take (or the pool is full) - free, no API call
@@ -202,11 +246,18 @@ export default async function handler(req, res) {
     await Promise.all([bumpCount(cache, dayKey, 26 * 60 * 60), bumpCount(cache, ipKey, 60 * 60)]);
 
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
-    const quote = await generateTake(client, sport, location, pool);
+    // A take that fails the checks is thrown away, so give it one more go before giving up
+    let take = await generateTake(client, sport, location, pool);
+    if (!take) {
+      await bumpCount(cache, dayKey, 26 * 60 * 60);
+      take = await generateTake(client, sport, location, pool);
+    }
 
-    if (!quote) {
+    if (!take) {
       return res.status(502).json({ error: 'No take came back' });
     }
+    const { quote, evidence } = take;
+    console.log('New take', { sport, location, quote, evidence });
 
     // Re-read so two people generating at once don't overwrite each other
     await addToPool(cache, poolKey, quote);
