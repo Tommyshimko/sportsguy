@@ -1108,8 +1108,8 @@
             }
 
             // Generate cache key from sport and location
-            generateKey(sport, location) {
-                return `${sport.toLowerCase()}_${location.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+            generateKey(sport, location, n = 0) {
+                return `${sport.toLowerCase()}_${location.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${n}`;
             }
 
             // Load cache from localStorage
@@ -1150,8 +1150,8 @@
             }
 
             // Get quote from cache if valid
-            get(sport, location) {
-                const key = this.generateKey(sport, location);
+            get(sport, location, n = 0) {
+                const key = this.generateKey(sport, location, n);
                 const entry = this.cache[key];
 
                 if (!entry) {
@@ -1179,14 +1179,14 @@
             }
 
             // Store quote in cache (with validation)
-            set(sport, location, quote) {
+            set(sport, location, quote, n = 0) {
                 // Validate before storing
                 if (!quote || typeof quote !== 'string' || quote.trim().length < 10) {
                     console.error('Refusing to cache invalid quote:', quote);
                     return;
                 }
 
-                const key = this.generateKey(sport, location);
+                const key = this.generateKey(sport, location, n);
                 this.cache[key] = {
                     quote: quote,
                     timestamp: Date.now(),
@@ -1676,7 +1676,7 @@
                 console.log('Fetching quote for:', { sport: currentSport, location: currentLocation });
 
                 // Check cache first
-                const cachedQuote = quoteCache.get(currentSport, currentLocation);
+                const cachedQuote = quoteCache.get(currentSport, currentLocation, takeIndex);
                 if (cachedQuote) {
                     console.log('Using cached quote, skipping API call');
                     return cachedQuote;
@@ -1686,12 +1686,12 @@
 
                 // Create abort controller for timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
                 
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sport: currentSport, location: currentLocation }),
+                    body: JSON.stringify({ sport: currentSport, location: currentLocation, n: takeIndex }),
                     signal: controller.signal
                 });
                 
@@ -1725,7 +1725,7 @@
                 }
 
                 // Cache the validated quote
-                quoteCache.set(currentSport, currentLocation, quote);
+                quoteCache.set(currentSport, currentLocation, quote, takeIndex);
 
                 return quote;
             } catch (error) {
@@ -1743,7 +1743,13 @@
             }
         }
 
-        async function generateQuote() {
+        // Which take we're on for this sport + city. A tap asks for the next one;
+        // opening the app or switching sport/city starts back at the first.
+        let takeIndex = 0;
+
+        async function generateQuote(event) {
+            takeIndex = (event && event.type === 'click') ? takeIndex + 1 : 0;
+
             // Show mini loading state
             el.quoteContainer.classList.add('loading');
             el.quoteHint.classList.remove('visible');

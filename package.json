@@ -1,0 +1,9 @@
+{
+  "name": "sportsguy",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
+    "@vercel/functions": "^3.9.8"
+  }
+}
