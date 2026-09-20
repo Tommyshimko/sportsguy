@@ -177,7 +177,7 @@ function parseTopics(text, quote) {
     // A player's team (as the sources state it) is what lets us vouch for his picture later
     if (topic.kind === 'player' && team && team.length < 40) topic.team = team;
     topics.push(topic);
-    if (topics.length === 2) break;   // each topic becomes a big button in the app, and two is what fits
+    if (topics.length === 3) break;   // three, because a player can be dropped below; the app shows two
   }
   return topics;
 }
@@ -233,7 +233,7 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
 - Just say the take. Do not greet anyone, address the fans, or explain that there is no local team or event.
 - Keep it about the games: no politics, legal trouble or betting.
 
-5. Pick the topics. List the one or two most interesting things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind. For a player on a team, add the full name of the team the sources say he plays for right now, because it is used to find the right photo of him.
+5. Pick the topics. Always list the team the take is about first, then up to two more interesting things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button (for a player that means his first AND last name, even when the take says only one of them), then the kind. For a player on a team, add the full name of the team the sources say he plays for right now, because it is used to find the right photo of him.
 
 Reply in exactly this format and nothing else:
 <evidence>
@@ -328,7 +328,7 @@ export default async function handler(req, res) {
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
   // Followed teams change what a take is about, so they get their own shelf
   const follow = follows.length ? `:for:${follows.join(',').toLowerCase()}` : '';
-  const poolKey = `takes:v17:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}${follow}`;
+  const poolKey = `takes:v18:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}${follow}`;
   const pool = await readPool(cache, poolKey);
   const send = (take, cached, more, takesLeft) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more, ...(takesLeft === undefined ? {} : { takesLeft }) });
 
@@ -358,7 +358,7 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     // A take that fails the checks is thrown away, so give it one more go before giving up
     // A topic take should not repeat what this city's main takes already said
-    const cityTakes = topic ? await readPool(cache, `takes:v17:${sport}:${location.toLowerCase()}`) : [];
+    const cityTakes = topic ? await readPool(cache, `takes:v18:${sport}:${location.toLowerCase()}`) : [];
     const used = [...pool, ...cityTakes].map(entry => entry.quote);
 
     // Signed in: take one off the balance first, and give it back if no take comes out
@@ -381,7 +381,10 @@ export default async function handler(req, res) {
     await attachImages(take.topics, sport, cache);
     // Tommy's rule: every highlighted PLAYER shows his headshot. If we can't vouch for a photo, the
     // player simply isn't offered as a topic (his name stays in the take, just not highlighted).
-    take.topics = take.topics.filter(entry => entry.kind !== 'player' || entry.image);
+    const withPhotos = take.topics.filter(entry => entry.kind !== 'player' || entry.image);
+    // A take with nothing highlighted looks broken, so if dropping photo-less players would leave
+    // none, keep the teams and events (which never need a photo) rather than nothing.
+    take.topics = withPhotos.length ? withPhotos : take.topics.filter(entry => entry.kind !== 'player');
     console.log('New take', { sport, location, topic, quote: take.quote, topics: take.topics, evidence: take.evidence });
 
     // Re-read so two people generating at once don't overwrite each other
