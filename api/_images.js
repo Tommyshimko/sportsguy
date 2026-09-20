@@ -105,8 +105,10 @@ export async function attachImages(topics, sport, cache) {
       }
       const url = await lookUp(topic, sport);
       if (url) topic.image = url;
-      // A found picture is good for a week (trades change teams). A miss is retried after a day.
-      await cache?.set(key, { url: url || '' }, { ttl: url ? 7 * 24 * 3600 : 24 * 3600, name: 'topic-image' });
+      // A found picture is good for a week (trades change teams). A miss is retried within the hour:
+      // a slow ESPN reply looks exactly like 'no picture', and a whole day of missing logos is worse
+      // than looking again.
+      await cache?.set(key, { url: url || '' }, { ttl: url ? 7 * 24 * 3600 : 3600, name: 'topic-image' });
     } catch (error) {
       console.warn('Image lookup failed', { label: topic.label, error: String(error.message || error) });
     }
