@@ -6,6 +6,7 @@ export const config = { maxDuration: 60 };
 // ==================== SETTINGS ====================
 const MODEL = 'claude-sonnet-5';
 const POOL_MAX = 4;                  // takes kept per sport + city
+const TOPIC_POOL_MAX = 2;            // takes kept per topic within a sport + city
 const POOL_TTL = 3 * 60 * 60;        // seconds a pool of takes stays fresh
 const IP_HOURLY_LIMIT = 12;          // new (paid) takes one person can trigger per hour
 const DAILY_LIMIT = Number(process.env.DAILY_TAKE_LIMIT) || 150; // new (paid) takes per day, everyone combined
@@ -51,15 +52,15 @@ async function readPool(cache, key) {
   return entry.takes;
 }
 
-async function addToPool(cache, key, quote) {
+async function addToPool(cache, key, take, max) {
   const entry = await cache.get(key);
   const fresh = entry && Date.now() - entry.created <= POOL_TTL * 1000;
   const created = fresh ? entry.created : Date.now();
   const takes = fresh ? entry.takes : [];
-  if (takes.length >= POOL_MAX || takes.includes(quote)) return;
+  if (takes.length >= max || takes.some(entry => entry.quote === take.quote)) return;
 
   const ttl = Math.max(60, POOL_TTL - Math.floor((Date.now() - created) / 1000));
-  await cache.set(key, { created, takes: [...takes, quote] }, { ttl, name: 'take-pool' });
+  await cache.set(key, { created, takes: [...takes, take] }, { ttl, name: 'take-pool' });
 }
 
 // The model replies as <evidence>...</evidence><take>...</take>. Only the take is shown;
@@ -102,7 +103,7 @@ export function parseReply(content) {
 
   const words = quote.split(' ').length;
   if (!quote || /NO_TAKE/.test(quote) || words < 5 || words > 45) return null;
-  return { quote: `"${quote}"`, evidence };
+  return { quote: `"${quote}"`, evidence, topics: parseTopics(text, quote) };
 }
 
 // A second, separate model reads the take against the copied evidence and nothing else.
@@ -143,13 +144,34 @@ async function reviseTake(client, quote, evidence, verdict) {
     system: `You fix one line of sports bar talk. A fact-checker compared the TAKE with its SOURCES and flagged a problem. Rewrite the take so that every person, number, result and date in it is directly backed by the sources: correct the flagged part if the sources give the right fact, otherwise cut it. Keep the same voice and keep a simple fan opinion at the end. One or two short sentences, 25 words at most, everyday words, no dashes or semicolons, days by name. Reply with only <take>the rewritten take</take>.`,
     messages: [{ role: 'user', content: `SOURCES:\n${evidence}\n\nTAKE:\n${quote}\n\nCHECKER: ${verdict}` }]
   });
-  const fixed = parseReply([{ type: 'text', text: `<evidence>${evidence}</evidence>` }, ...response.content]);
-  return fixed;
+  return parseReply([{ type: 'text', text: `<evidence>${evidence}</evidence>` }, ...response.content]);
+}
+
+// Topics are the words the app highlights and the chips it offers under the take. Each line is
+// "exact words from the take | chip label | kind". Anything not literally in the take is dropped.
+const TOPIC_KINDS = ['team', 'player', 'event'];
+
+function parseTopics(text, quote) {
+  const block = text.match(/<topics>([\s\S]*?)(?:<\/topics|$)/i)?.[1] || '';
+  const topics = [];
+  for (const line of block.split('\n')) {
+    let [words, label, kind] = line.replace(/^\s*[-*]\s*/, '').split('|').map(part => (part || '').trim());
+    if (!words || !label || label.length > 28) continue;
+    // Highlight just the name. If it sent a phrase, fall back to the part of the label the take actually says.
+    if (words.split(' ').length > 3 || !quote.includes(words)) {
+      words = label.split(' ').reverse().find(part => part.length > 2 && new RegExp(`\\b${part}\\b`).test(quote)) || '';
+    }
+    if (!words) continue;
+    if (topics.some(t => t.text === words || t.label.toLowerCase() === label.toLowerCase())) continue;
+    topics.push({ text: words, label, kind: TOPIC_KINDS.includes(kind) ? kind : 'team' });
+    if (topics.length === 3) break;
+  }
+  return topics;
 }
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
 
-export async function generateTake(client, sport, location, usedTakes) {
+export async function generateTake(client, sport, location, usedTakes, topic = '') {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -165,11 +187,14 @@ export async function generateTake(client, sport, location, usedTakes) {
 
   const isTeamSport = TEAM_SPORTS.includes(sport);
   const place = /^\d{5}$/.test(location) ? `US zip code ${location} (work out which city that is first)` : location;
-  const pickStory = isTeamSport
+  const aboutTopic = `The person asked for a take about ${topic}. The whole take is about ${topic}: the newest thing that has happened with them, seen the way a fan in ${location} would see it.`;
+  const pickStory = topic ? aboutTopic : isTeamSport
     ? `Pick the one ${league} team most people in ${location} root for. If the area has two, pick one. If it has none, pick the nearest team locals follow. The whole take is about that one team.`
     : `There is no home team in ${sport}, so use the biggest story on tour this week. Only make it local if a tour event is being played in or near ${location} within the next two weeks.`;
 
-  const searchHow = isTeamSport
+  const searchHow = topic
+    ? `Look for the newest thing about ${topic}. If it is a team, search for its most recent game by date, like "${topic} score September 18 2026". If it is a player, search "${topic} ${league} latest game". If it is an event, search "${topic} results". Every search result shows how old its page is. Prefer pages from the last three days, and in a quiet stretch use the most recent real news there is and say when it happened.`
+    : isTeamSport
     ? `Look for the most recent game or result itself, with a query like "New York Mets MLB score September 18 2026" or "New York Mets game recap", rather than general team news. Use the full team name and the league so you don't get a different team with the same nickname. Every search result shows how old its page is. When the season is on, rest the take only on pages from the last three days. In the offseason, use the newest real news you can find, or failing that the biggest move of this offseason.`
     : `Look for this week's tournament with a query like "${sport} tournament this week leaderboard" or "${sport} news this week". Every search result shows how old its page is. Prefer pages from the last three days. If it is a quiet week, use the result of the most recent big tournament or the next big event coming up, and say when it was or will be.`;
 
@@ -192,15 +217,20 @@ export async function generateTake(client, sport, location, usedTakes) {
 - Just say the take. Do not greet anyone, address the fans, or explain that there is no local team or event.
 - Keep it about the games: no politics, legal trouble or betting.
 
+5. Pick the topics. List one to three things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind.
+
 Reply in exactly this format and nothing else:
 <evidence>
 - (page age) "sentence copied from the source"
 </evidence>
 <take>the take, without quote marks</take>
+<topics>
+- exact words from the take | Full Name | team, player or event
+</topics>
 
 If the search turns up nothing solid enough, reply with <take>NO_TAKE</take>.`;
 
-  let userMessage = `Give me a fresh ${sport} take for ${location}.`;
+  let userMessage = topic ? `Give me a fresh take about ${topic}.` : `Give me a fresh ${sport} take for ${location}.`;
   if (usedTakes.length) {
     userMessage += `\n\nI've already used the takes below, so build this one on a different fact or storyline about the same team. It should stand on its own - don't refer back to them:\n${usedTakes.map(t => `- ${t}`).join('\n')}`;
   }
@@ -234,6 +264,8 @@ If the search turns up nothing solid enough, reply with <take>NO_TAKE</take>.`;
 
   const fixed = await reviseTake(client, take.quote, take.evidence, first.verdict);
   if (!fixed) return null;
+  // The rewrite may have cut a name, so keep only the topics that survived it
+  fixed.topics = take.topics.filter(topic => fixed.quote.includes(topic.text));
   const second = await verifyTake(client, fixed.quote, fixed.evidence, calendar);
   return second.pass ? fixed : null;
 }
@@ -262,6 +294,7 @@ export default async function handler(req, res) {
   const sport = String(req.body?.sport || '').toLowerCase();
   const location = cleanLocation(req.body?.location || '');
   const n = Math.max(0, Math.min(1000, parseInt(req.body?.n, 10) || 0));
+  const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
 
   if (!LEAGUES[sport] || location.length < 2) {
     return res.status(400).json({ error: 'Missing sport or location' });
@@ -273,17 +306,15 @@ export default async function handler(req, res) {
   }
 
   const cache = getCache({ namespace: 'sportsguy' });
-  const poolKey = `takes:v12:${sport}:${location.toLowerCase()}`;
+  const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
+  const poolKey = `takes:v13:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
   const pool = await readPool(cache, poolKey);
+  const send = (take, cached, more) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more });
 
-  // Already have this take (or the pool is full) - free, no API call
-  // `more` tells the app whether another tap can turn up something new
-  if (n < pool.length) {
-    return res.status(200).json({ quote: pool[n], cached: true, more: n + 1 < POOL_MAX });
-  }
-  if (pool.length >= POOL_MAX) {
-    return res.status(200).json({ quote: pool[n % pool.length], cached: true, more: false });
-  }
+  // Already have this take (or the pool is full) - free, no API call.
+  // `more` tells the app whether asking again can turn up something new.
+  if (n < pool.length) return send(pool[n], true, n + 1 < poolMax);
+  if (pool.length >= poolMax) return send(pool[n % pool.length], true, false);
 
   // A new take costs money - check the limits first
   const day = new Date().toISOString().slice(0, 10);
@@ -295,9 +326,7 @@ export default async function handler(req, res) {
   const [dayCount, ipCount] = await Promise.all([readCount(cache, dayKey), readCount(cache, ipKey)]);
   if (dayCount >= DAILY_LIMIT || ipCount >= IP_HOURLY_LIMIT) {
     console.warn('Limit hit', { dayCount, ipCount, ip });
-    if (pool.length) {
-      return res.status(200).json({ quote: pool[n % pool.length], cached: true, more: false });
-    }
+    if (pool.length) return send(pool[n % pool.length], true, false);
     return res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
   }
 
@@ -306,22 +335,24 @@ export default async function handler(req, res) {
 
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     // A take that fails the checks is thrown away, so give it one more go before giving up
-    let take = await generateTake(client, sport, location, pool);
+    // A topic take should not repeat what this city's main takes already said
+    const cityTakes = topic ? await readPool(cache, `takes:v13:${sport}:${location.toLowerCase()}`) : [];
+    const used = [...pool, ...cityTakes].map(entry => entry.quote);
+    let take = await generateTake(client, sport, location, used, topic);
     if (!take) {
       await bumpCount(cache, dayKey, 26 * 60 * 60);
-      take = await generateTake(client, sport, location, pool);
+      take = await generateTake(client, sport, location, used, topic);
     }
 
     if (!take) {
       return res.status(502).json({ error: 'No take came back' });
     }
-    const { quote, evidence } = take;
-    console.log('New take', { sport, location, quote, evidence });
+    console.log('New take', { sport, location, topic, quote: take.quote, topics: take.topics, evidence: take.evidence });
 
     // Re-read so two people generating at once don't overwrite each other
-    await addToPool(cache, poolKey, quote);
+    await addToPool(cache, poolKey, { quote: take.quote, topics: take.topics }, poolMax);
 
-    return res.status(200).json({ quote, cached: false, more: n + 1 < POOL_MAX });
+    return send(take, false, n + 1 < poolMax);
 
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
