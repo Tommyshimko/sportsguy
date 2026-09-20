@@ -28,8 +28,9 @@ sportsguy/
 ## Take Generator (api/generate.js)
 Rebuilt Sept 2026 after a full QA. How it works, in order:
 1. **Shared pool** - up to 4 takes per sport + city are kept for 3 hours (Vercel Runtime Cache). The app sends `{sport, location, n}`; `n` is which take it wants (a tap asks for the next one). Pool hits are free and instant.
-2. **New take** (~5c, ~6s) - Claude Sonnet 5 + web search. The prompt makes it search by date for the actual game, copy out its evidence sentences first, then write the take using only those facts.
-3. **Hard checks in code** - any number in the take must appear in the evidence or the take is thrown away; "tonight / last night" are rewritten to real weekdays; over 45 words is rejected; one automatic retry.
+2. **New take** (~7c, ~7s including the fact-check) - Claude Sonnet 5 + web search. The prompt makes it search by date for the actual game, copy out its evidence sentences first, then write the take using only those facts.
+3. **Independent fact-check** - a separate model call (`verifyTake`) reads the take against the copied evidence only: ruthless on results, numbers, people and dates; relaxed on opinions. On a FAIL, `reviseTake` rewrites from the evidence using the checker's complaint and it is checked again, before paying for a new search. Added after a live take gave a quarterback a receiver's touchdown count. Keep the checker on Sonnet: Haiku got weekdays wrong with the calendar in front of it.
+3b. **Hard checks in code** - any number in the take must appear in the evidence or the take is thrown away; "tonight / last night" are rewritten to real weekdays; over 45 words is rejected; one automatic retry.
 4. **Limits** - `DAILY_TAKE_LIMIT` env (default 150 paid takes/day), 12/hour per IP, only sportsguy.xyz may call it from a browser.
 
 **Voice rules** (in the prompt): ~20 words, everyday words a non-fan can say, one team, at most one player, no stats or slang, no dashes, ends on a simple opinion.
