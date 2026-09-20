@@ -63,6 +63,36 @@ async function lookUp(topic, sport) {
   return `${RESIZE}${path}&${type === 'team' ? 'w=120&h=120' : 'w=220&h=160'}`;
 }
 
+// Teams matching what someone typed, for the "follow a team" search. Same sources as the logos, so a
+// followed team and a highlighted team are always the same thing.
+export async function findTeams(query, sport = '') {
+  const url = `${SEARCH}?${new URLSearchParams({ query, limit: '12', type: 'team' })}`;
+  const response = await fetch(url, { headers: BROWSER, signal: AbortSignal.timeout(6000) });
+  if (!response.ok) throw new Error(`ESPN search ${response.status}`);
+
+  const seen = new Set();
+  return ((await response.json()).items || [])
+    .filter(item => {
+      const wanted = Object.entries(ESPN_SPORT).find(([, espn]) => espn === item.sport)?.[0];
+      if (!wanted || item.type !== 'team') return false;
+      if (sport && wanted !== sport) return false;
+      if (LEAGUES[wanted] && !LEAGUES[wanted].includes(item.league)) return false;
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    })
+    .slice(0, 8)
+    .map(item => {
+      const logo = item.logos?.[0]?.href;
+      return {
+        id: String(item.id),
+        label: item.displayName,
+        sport: Object.entries(ESPN_SPORT).find(([, espn]) => espn === item.sport)[0],
+        image: logo?.startsWith('https://a.espncdn.com/') ? `${RESIZE}${logo.replace('https://a.espncdn.com', '')}&w=120&h=120` : null,
+      };
+    });
+}
+
 // Adds `image` to every topic it can vouch for. Never throws: pictures are a nicety, takes are the product.
 export async function attachImages(topics, sport, cache) {
   await Promise.all(topics.map(async topic => {

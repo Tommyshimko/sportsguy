@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache } from '@vercel/functions';
 import { attachImages } from './_images.js';
+import { accountsReady, chargeOneTake, followedTeams, refundOneTake, whoIs } from './_account.js';
 
 export const config = { maxDuration: 60 };
 
@@ -183,7 +184,7 @@ function parseTopics(text, quote) {
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
 
-export async function generateTake(client, sport, location, usedTakes, topic = '') {
+export async function generateTake(client, sport, location, usedTakes, topic = '', follows = []) {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -200,6 +201,9 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
   const isTeamSport = TEAM_SPORTS.includes(sport);
   const place = /^\d{5}$/.test(location) ? `US zip code ${location} (work out which city that is first)` : location;
   const aboutTopic = `The person asked for a take about ${topic}. The whole take is about ${topic}: the newest thing that has happened with them, seen the way a fan in ${location} would see it.`;
+  const followLine = follows.length
+    ? ` This person follows ${follows.join(' and ')}, so if one of them has something worth talking about, that is the story. If none of them do, use the local team as usual.`
+    : '';
   const pickStory = topic ? aboutTopic : isTeamSport
     ? `Pick the one ${league} team most people in ${location} root for. If the area has two, pick one. If it has none, pick the nearest team locals follow. The whole take is about that one team.`
     : `There is no home team in ${sport}, so use the biggest story on tour this week. Only make it local if a tour event is being played in or near ${location} within the next two weeks.`;
@@ -212,7 +216,7 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
 
   const system = `You write one line of sports bar talk for someone who does not follow sports but wants to join the conversation. Today is ${today}. They are in ${place}. The sport is ${sport} (${league}).
 
-1. Pick the story. ${pickStory}
+1. Pick the story. ${pickStory}${followLine}
 
 2. Search by date. ${searchHow} Do not take recent results from undated pages, season roundups or Wikipedia, because those are often weeks behind and would make this person sound out of touch.
 
@@ -307,6 +311,9 @@ export default async function handler(req, res) {
   const location = cleanLocation(req.body?.location || '');
   const n = Math.max(0, Math.min(1000, parseInt(req.body?.n, 10) || 0));
   const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
+  // Signed in? Then the balance lives on the server and the phone can't edit it.
+  const userId = accountsReady() ? await whoIs(req.body?.token) : null;
+  const follows = userId ? await followedTeams(userId, sport) : [];
 
   if (!LEAGUES[sport] || location.length < 2) {
     return res.status(400).json({ error: 'Missing sport or location' });
@@ -319,9 +326,11 @@ export default async function handler(req, res) {
 
   const cache = getCache({ namespace: 'sportsguy' });
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
-  const poolKey = `takes:v17:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
+  // Followed teams change what a take is about, so they get their own shelf
+  const follow = follows.length ? `:for:${follows.join(',').toLowerCase()}` : '';
+  const poolKey = `takes:v17:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}${follow}`;
   const pool = await readPool(cache, poolKey);
-  const send = (take, cached, more) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more });
+  const send = (take, cached, more, takesLeft) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more, ...(takesLeft === undefined ? {} : { takesLeft }) });
 
   // Already have this take (or the pool is full) - free, no API call.
   // `more` tells the app whether asking again can turn up something new.
@@ -351,11 +360,20 @@ export default async function handler(req, res) {
     // A topic take should not repeat what this city's main takes already said
     const cityTakes = topic ? await readPool(cache, `takes:v17:${sport}:${location.toLowerCase()}`) : [];
     const used = [...pool, ...cityTakes].map(entry => entry.quote);
-    let take = await generateTake(client, sport, location, used, topic);
+
+    // Signed in: take one off the balance first, and give it back if no take comes out
+    let account;
+    if (userId) {
+      account = await chargeOneTake(userId);
+      if (!account) return res.status(402).json({ error: 'Out of takes' });
+    }
+
+    let take = await generateTake(client, sport, location, used, topic, follows);
     if (!take) {
       await bumpCount(cache, dayKey, 26 * 60 * 60);
-      take = await generateTake(client, sport, location, used, topic);
+      take = await generateTake(client, sport, location, used, topic, follows);
     }
+    if (!take && userId) await refundOneTake(userId);
 
     if (!take) {
       return res.status(502).json({ error: 'No take came back' });
@@ -369,7 +387,7 @@ export default async function handler(req, res) {
     // Re-read so two people generating at once don't overwrite each other
     await addToPool(cache, poolKey, { quote: take.quote, topics: take.topics }, poolMax);
 
-    return send(take, false, n + 1 < poolMax);
+    return send(take, false, n + 1 < poolMax, account?.takesLeft);
 
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
