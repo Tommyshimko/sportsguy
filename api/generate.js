@@ -84,9 +84,17 @@ export function parseReply(content) {
     .replace(/\btomorrow\b/gi, dayName(1));
 
   // Every number said out loud has to come from the sources, or the take is thrown away
+  const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
   const evidenceNumbers = new Set(evidence.match(/\d+/g) || []);
+  // "two touchdowns" is a number too: a spelled-out count needs the same count in the sources
+  for (const word of (evidence.toLowerCase().match(/\b[a-z]+\b/g) || [])) {
+    if (WORDS.includes(word)) evidenceNumbers.add(String(WORDS.indexOf(word)));
+  }
+  const spelled = (quote.toLowerCase().match(/\b[a-z]+\b/g) || [])
+    .filter(word => WORDS.includes(word) && word !== 'one')
+    .map(word => String(WORDS.indexOf(word)));
   // (\b...\b skips team names like 49ers and 76ers)
-  const unsourced = (quote.match(/\b\d+\b/g) || []).filter(number => !evidenceNumbers.has(number));
+  const unsourced = [...(quote.match(/\b\d+\b/g) || []), ...spelled].filter(number => !evidenceNumbers.has(number));
   if (unsourced.length) {
     console.warn('Dropped take with unsourced numbers', { quote, unsourced });
     return null;
@@ -95,6 +103,48 @@ export function parseReply(content) {
   const words = quote.split(' ').length;
   if (!quote || /NO_TAKE/.test(quote) || words < 5 || words > 45) return null;
   return { quote: `"${quote}"`, evidence };
+}
+
+// A second, separate model reads the take against the copied evidence and nothing else.
+// It catches what a number check can't: a stat pinned on the wrong player, a flipped result.
+// Sonnet, not Haiku: Haiku kept getting weekdays wrong even with the calendar in front of it
+const CHECKER_MODEL = 'claude-sonnet-5';
+
+export async function verifyTake(client, quote, evidence, calendar = '') {
+  if (!evidence) return { pass: false, verdict: 'FAIL: no evidence' };
+  const response = await client.messages.create({
+    model: CHECKER_MODEL,
+    max_tokens: 1500,
+    output_config: { effort: 'low' },
+    system: `You are a strict sports fact-checker. You get SOURCES (sentences copied from news pages) and a TAKE (one line of bar talk written from them). Be ruthless about the facts that get someone laughed at in a bar:
+- who won and who lost, and the score
+- every number, including spelled-out ones. A number is only supported if the sources give that same number for that same player or team (a receiver's two touchdowns are not the quarterback's two)
+- every person named: the sources must show that person doing what the take says, on the team the take implies
+- days and dates, checked against this calendar: ${calendar}
+
+Be relaxed about the rest. Opinions, feelings, predictions and characterizations of a supported result ("looked rough" about a loss, "on fire" about a big win) need no support. Names of venues, tournaments and team nicknames only fail if the sources contradict them. "Last week" and "next week" are fine when the calendar agrees. Use only the sources for facts, never your own knowledge, because rosters and results change.
+
+Reply with exactly PASS if every fact is directly supported. Otherwise reply FAIL: and the unsupported fact in a few words.`,
+    messages: [{ role: 'user', content: `SOURCES:\n${evidence}\n\nTAKE:\n${quote}` }]
+  });
+  const verdict = response.content.filter(block => block.type === 'text').map(block => block.text).join('').trim();
+  const pass = /^PASS\b/.test(verdict);
+  if (!pass) console.warn('Fact-check rejected a take', { quote, verdict });
+  return { pass, verdict };
+}
+
+// Cheap repair before paying for a whole new search: rewrite the take using only what the
+// evidence supports, fixing what the checker flagged.
+async function reviseTake(client, quote, evidence, verdict) {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    output_config: { effort: 'low' },
+    system: `You fix one line of sports bar talk. A fact-checker compared the TAKE with its SOURCES and flagged a problem. Rewrite the take so that every person, number, result and date in it is directly backed by the sources: correct the flagged part if the sources give the right fact, otherwise cut it. Keep the same voice and keep a simple fan opinion at the end. One or two short sentences, 25 words at most, everyday words, no dashes or semicolons, days by name. Reply with only <take>the rewritten take</take>.`,
+    messages: [{ role: 'user', content: `SOURCES:\n${evidence}\n\nTAKE:\n${quote}\n\nCHECKER: ${verdict}` }]
+  });
+  const fixed = parseReply([{ type: 'text', text: `<evidence>${evidence}</evidence>` }, ...response.content]);
+  return fixed;
 }
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
@@ -129,7 +179,7 @@ export async function generateTake(client, sport, location, usedTakes) {
 
 2. Search by date. ${searchHow} Do not take recent results from undated pages, season roundups or Wikipedia, because those are often weeks behind and would make this person sound out of touch.
 
-3. Copy your evidence first. Before writing, copy out the one or two sentences from the search results that the take rests on, each with its page age. Then check them against each other: who won and who lost, the score, and what day it happened. If you cannot tell who won, or the pages disagree, leave that fact out. If a game or tournament is still being played, say it is still going rather than naming a winner. Use this calendar for weekdays: ${calendar}. One fact you are sure of beats three you are not. Every name, score, number and event in the take has to appear in the evidence you copied, spelled the same way. Do not add players, streaks, history or team line-ups from memory, since rosters change and memory is how mistakes get in. The opinion is yours. The facts are the sources'. Do not stretch them either: a one-shot lead is not running away with it, and being one game short of the playoff line is not being about to clinch. If you are not sure what a standings phrase means, leave it out. Only name the day something happened if the source gives the date. Only mention a player if the source makes clear he plays for this team right now, because a quote from a rival talking about the team is not a player on it. Never use a score from a game that was still being played when the page was written. If all you have is a page from the middle of a game, use your second search to find how it ended ("recap" or "final score"), and if you still can't, talk about something else.
+3. Copy your evidence first. Before writing, copy out the sentences from the search results that the take rests on (up to four), each with its page age. A separate fact-checker will read only these sentences and throw the take away if any person, number, result or date in it is not backed by them, so copy a sentence for each one. Then check them against each other: who won and who lost, the score, and what day it happened. If you cannot tell who won, or the pages disagree, leave that fact out. If a game or tournament is still being played, say it is still going rather than naming a winner. Use this calendar for weekdays: ${calendar}. One fact you are sure of beats three you are not. Every name, score, number and event in the take has to appear in the evidence you copied, spelled the same way. Do not add players, streaks, history or team line-ups from memory, since rosters change and memory is how mistakes get in. The opinion is yours. The facts are the sources'. Do not stretch them either: a one-shot lead is not running away with it, and being one game short of the playoff line is not being about to clinch. If you are not sure what a standings phrase means, leave it out. Only name the day something happened if the source gives the date. A player's number has to be that player's own number, stated about him in the source: a receiver catching two touchdowns does not mean the quarterback threw two. If you are not certain whose number it is, say he played great and leave the count out. Only mention a player if the source makes clear he plays for this team right now, because a quote from a rival talking about the team is not a player on it. Never use a score from a game that was still being played when the page was written. If all you have is a page from the middle of a game, use your second search to find how it ended ("recap" or "final score"), and if you still can't, talk about something else.
 
 4. Write the take. It is what a local fan would say out loud at the bar, and the person saying it is not a fan, so it has to be easy to say and easy to understand:
 - One or two short sentences, about 20 words in total and never more than 25. Count them. Cut anything that is not needed.
@@ -177,7 +227,15 @@ If the search turns up nothing solid enough, reply with <take>NO_TAKE</take>.`;
   }
 
   if (response.stop_reason === 'refusal') return null;
-  return parseReply(response.content);
+  const take = parseReply(response.content);
+  if (!take) return null;
+  const first = await verifyTake(client, take.quote, take.evidence, calendar);
+  if (first.pass) return take;
+
+  const fixed = await reviseTake(client, take.quote, take.evidence, first.verdict);
+  if (!fixed) return null;
+  const second = await verifyTake(client, fixed.quote, fixed.evidence, calendar);
+  return second.pass ? fixed : null;
 }
 
 // ==================== HANDLER ====================
@@ -215,7 +273,7 @@ export default async function handler(req, res) {
   }
 
   const cache = getCache({ namespace: 'sportsguy' });
-  const poolKey = `takes:v9:${sport}:${location.toLowerCase()}`;
+  const poolKey = `takes:v12:${sport}:${location.toLowerCase()}`;
   const pool = await readPool(cache, poolKey);
 
   // Already have this take (or the pool is full) - free, no API call
