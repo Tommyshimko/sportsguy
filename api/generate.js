@@ -10,6 +10,8 @@ const POOL_MAX = 4;                  // takes kept per sport + city
 const TOPIC_POOL_MAX = 2;            // takes kept per topic within a sport + city
 const POOL_TTL = 3 * 60 * 60;        // seconds a pool of takes stays fresh
 const IP_HOURLY_LIMIT = 12;          // new (paid) takes one person can trigger per hour
+const DEV_HOURLY_LIMIT = 80;         // the same, for the app's dev mode (the daily limit still applies to everyone)
+const DEV_KEY = 'sg-dev-2026';
 const DAILY_LIMIT = Number(process.env.DAILY_TAKE_LIMIT) || 150; // new (paid) takes per day, everyone combined
 
 const LEAGUES = {
@@ -317,7 +319,7 @@ export default async function handler(req, res) {
 
   const cache = getCache({ namespace: 'sportsguy' });
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
-  const poolKey = `takes:v16:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
+  const poolKey = `takes:v17:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
   const pool = await readPool(cache, poolKey);
   const send = (take, cached, more) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more });
 
@@ -334,7 +336,8 @@ export default async function handler(req, res) {
   const ipKey = `ip:${ip}:${hour}`;
 
   const [dayCount, ipCount] = await Promise.all([readCount(cache, dayKey), readCount(cache, ipKey)]);
-  if (dayCount >= DAILY_LIMIT || ipCount >= IP_HOURLY_LIMIT) {
+  const hourly = req.body?.dev === DEV_KEY ? DEV_HOURLY_LIMIT : IP_HOURLY_LIMIT;
+  if (dayCount >= DAILY_LIMIT || ipCount >= hourly) {
     console.warn('Limit hit', { dayCount, ipCount, ip });
     if (pool.length) return send(pool[n % pool.length], true, false);
     return res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
@@ -346,7 +349,7 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     // A take that fails the checks is thrown away, so give it one more go before giving up
     // A topic take should not repeat what this city's main takes already said
-    const cityTakes = topic ? await readPool(cache, `takes:v16:${sport}:${location.toLowerCase()}`) : [];
+    const cityTakes = topic ? await readPool(cache, `takes:v17:${sport}:${location.toLowerCase()}`) : [];
     const used = [...pool, ...cityTakes].map(entry => entry.quote);
     let take = await generateTake(client, sport, location, used, topic);
     if (!take) {
@@ -358,6 +361,9 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'No take came back' });
     }
     await attachImages(take.topics, sport, cache);
+    // Tommy's rule: every highlighted PLAYER shows his headshot. If we can't vouch for a photo, the
+    // player simply isn't offered as a topic (his name stays in the take, just not highlighted).
+    take.topics = take.topics.filter(entry => entry.kind !== 'player' || entry.image);
     console.log('New take', { sport, location, topic, quote: take.quote, topics: take.topics, evidence: take.evidence });
 
     // Re-read so two people generating at once don't overwrite each other

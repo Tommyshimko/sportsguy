@@ -3,9 +3,9 @@
 // The rule: a missing picture is fine, a wrong picture is not. So a picture is attached only when
 //  - the name matches exactly (accents, punctuation and case aside)
 //  - it's the same sport the take is about
-//  - for a player on a team, ESPN's CURRENT team matches the team the writer saw in the news
-//  - there is exactly one such match (two NFL players called Josh Allen with no team to tell them
-//    apart = no picture)
+//  - there is exactly one such person. A unique name is enough: it's his face whatever team he's on.
+//    When two players share a name (there are two Josh Allens in the NFL), the team the writer saw
+//    in the news has to pick out exactly one of them, otherwise no picture
 //  - the image file really exists
 // Anything else falls back to initials in the app.
 
@@ -49,9 +49,8 @@ async function lookUp(topic, sport) {
     (type === 'team' ? sameTeam(item.displayName, topic.label) : plain(item.displayName) === plain(topic.label))
   );
 
-  if (type === 'player' && LEAGUES[sport]) {
-    // Team sports: the player has to be on the team the news said he's on. No stated team, no picture.
-    if (!topic.team) return null;
+  // Same name more than once: only the team can tell them apart
+  if (type === 'player' && matches.length > 1 && topic.team) {
     matches = matches.filter(item => (item.teamRelationships || []).some(rel => sameTeam(rel.displayName, topic.team)));
   }
   if (matches.length !== 1) return null;
@@ -67,7 +66,7 @@ async function lookUp(topic, sport) {
 // Adds `image` to every topic it can vouch for. Never throws: pictures are a nicety, takes are the product.
 export async function attachImages(topics, sport, cache) {
   await Promise.all(topics.map(async topic => {
-    const key = `img:v1:${sport}:${topic.kind}:${plain(topic.label)}:${plain(topic.team)}`;
+    const key = `img:v2:${sport}:${topic.kind}:${plain(topic.label)}:${plain(topic.team)}`;
     try {
       const saved = await cache?.get(key);
       if (saved !== undefined && saved !== null) {
