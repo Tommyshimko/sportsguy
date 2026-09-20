@@ -172,7 +172,7 @@ function parseTopics(text, quote) {
     // A player's team (as the sources state it) is what lets us vouch for his picture later
     if (topic.kind === 'player' && team && team.length < 40) topic.team = team;
     topics.push(topic);
-    if (topics.length === 3) break;
+    if (topics.length === 2) break;   // each topic becomes a big button in the app, and two is what fits
   }
   return topics;
 }
@@ -225,7 +225,7 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
 - Just say the take. Do not greet anyone, address the fans, or explain that there is no local team or event.
 - Keep it about the games: no politics, legal trouble or betting.
 
-5. Pick the topics. List one to three things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind. For a player on a team, add the full name of the team the sources say he plays for right now, because it is used to find the right photo of him.
+5. Pick the topics. List the one or two most interesting things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind. For a player on a team, add the full name of the team the sources say he plays for right now, because it is used to find the right photo of him.
 
 Reply in exactly this format and nothing else:
 <evidence>
