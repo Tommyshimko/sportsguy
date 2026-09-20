@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache } from '@vercel/functions';
+import { attachImages } from './_images.js';
 
 export const config = { maxDuration: 60 };
 
@@ -155,7 +156,7 @@ function parseTopics(text, quote) {
   const block = text.match(/<topics>([\s\S]*?)(?:<\/topics|$)/i)?.[1] || '';
   const topics = [];
   for (const line of block.split('\n')) {
-    let [words, label, kind] = line.replace(/^\s*[-*]\s*/, '').split('|').map(part => (part || '').trim());
+    let [words, label, kind, team] = line.replace(/^\s*[-*]\s*/, '').split('|').map(part => (part || '').trim());
     if (!words || !label || label.length > 28) continue;
     // Highlight just the name: the full label if the take says it, else the given words when they
     // are part of the name, else whichever piece of the name the take does say.
@@ -166,7 +167,10 @@ function parseTopics(text, quote) {
     }
     if (!words) continue;
     if (topics.some(t => t.text === words || t.label.toLowerCase() === label.toLowerCase())) continue;
-    topics.push({ text: words, label, kind: TOPIC_KINDS.includes(kind) ? kind : 'team' });
+    const topic = { text: words, label, kind: TOPIC_KINDS.includes(kind) ? kind : 'team' };
+    // A player's team (as the sources state it) is what lets us vouch for his picture later
+    if (topic.kind === 'player' && team && team.length < 40) topic.team = team;
+    topics.push(topic);
     if (topics.length === 3) break;
   }
   return topics;
@@ -220,7 +224,7 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
 - Just say the take. Do not greet anyone, address the fans, or explain that there is no local team or event.
 - Keep it about the games: no politics, legal trouble or betting.
 
-5. Pick the topics. List one to three things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind.
+5. Pick the topics. List one to three things in the take that this person might want another take about next: the team, a player, an event. Give just the name exactly as the take says it (one to three words, like "Yankees" or "Judge", never a whole phrase), then the full proper name for a button, then the kind. For a player on a team, add the full name of the team the sources say he plays for right now, because it is used to find the right photo of him.
 
 Reply in exactly this format and nothing else:
 <evidence>
@@ -228,7 +232,7 @@ Reply in exactly this format and nothing else:
 </evidence>
 <take>the take, without quote marks</take>
 <topics>
-- exact words from the take | Full Name | team, player or event
+- exact words from the take | Full Name | team, player or event | player's current team
 </topics>
 
 If the search turns up nothing solid enough, reply with <take>NO_TAKE</take>.`;
@@ -310,7 +314,7 @@ export default async function handler(req, res) {
 
   const cache = getCache({ namespace: 'sportsguy' });
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
-  const poolKey = `takes:v13:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
+  const poolKey = `takes:v14:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}`;
   const pool = await readPool(cache, poolKey);
   const send = (take, cached, more) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more });
 
@@ -339,7 +343,7 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     // A take that fails the checks is thrown away, so give it one more go before giving up
     // A topic take should not repeat what this city's main takes already said
-    const cityTakes = topic ? await readPool(cache, `takes:v13:${sport}:${location.toLowerCase()}`) : [];
+    const cityTakes = topic ? await readPool(cache, `takes:v14:${sport}:${location.toLowerCase()}`) : [];
     const used = [...pool, ...cityTakes].map(entry => entry.quote);
     let take = await generateTake(client, sport, location, used, topic);
     if (!take) {
@@ -350,6 +354,7 @@ export default async function handler(req, res) {
     if (!take) {
       return res.status(502).json({ error: 'No take came back' });
     }
+    await attachImages(take.topics, sport, cache);
     console.log('New take', { sport, location, topic, quote: take.quote, topics: take.topics, evidence: take.evidence });
 
     // Re-read so two people generating at once don't overwrite each other
