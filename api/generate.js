@@ -82,6 +82,7 @@ export function parseReply(content) {
   quote = quote
     .replace(/\blast night\b/gi, `${dayName(-1)} night`)
     .replace(/\btonight\b/gi, `${dayName(0)} night`)
+    .replace(/\btoday\b/gi, dayName(0))
     .replace(/\byesterday\b/gi, dayName(-1))
     .replace(/\btomorrow\b/gi, dayName(1));
 
