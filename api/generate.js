@@ -157,8 +157,11 @@ function parseTopics(text, quote) {
   for (const line of block.split('\n')) {
     let [words, label, kind] = line.replace(/^\s*[-*]\s*/, '').split('|').map(part => (part || '').trim());
     if (!words || !label || label.length > 28) continue;
-    // Highlight just the name. If it sent a phrase, fall back to the part of the label the take actually says.
-    if (words.split(' ').length > 3 || !quote.includes(words)) {
+    // Highlight just the name: the full label if the take says it, else the given words when they
+    // are part of the name, else whichever piece of the name the take does say.
+    const inLabel = words.split(' ').every(part => label.toLowerCase().includes(part.toLowerCase()));
+    if (quote.includes(label)) words = label;
+    else if (!(inLabel && quote.includes(words))) {
       words = label.split(' ').reverse().find(part => part.length > 2 && new RegExp(`\\b${part}\\b`).test(quote)) || '';
     }
     if (!words) continue;
