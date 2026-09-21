@@ -406,7 +406,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v1:${sport}:${day}`;
+    const key = `season:v2:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
