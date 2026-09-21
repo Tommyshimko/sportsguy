@@ -184,6 +184,63 @@ function parseTopics(text, quote) {
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
 
+const SEASON_TTL = 6 * 60 * 60;      // a season doesn't move fast; one answer serves everyone for hours
+
+// Where the season is, in the words a regular would use if you sat down next to him knowing nothing.
+// This is the same for everyone on earth, so one generation serves the whole app for six hours.
+export async function generateSeason(client, sport) {
+  const league = LEAGUES[sport];
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York',
+  });
+
+  const system = `Someone has just asked you where ${sport} (${league}) is up to. They do not follow it at all. Today is ${today}.
+
+1. Find out. Search for where the ${league} season or ${sport} calendar actually is right now - how far in, what just happened, what is next and when. Every search result shows how old its page is; prefer pages from the last week and never trust an undated page or Wikipedia for what is happening now.
+
+2. Copy your evidence first, up to three sentences from the results, each with its page age. A fact-checker reads only these, so copy a sentence for anything you state.
+
+3. Then answer, out loud, the way a regular at the bar would:
+- Two short sentences. About 25 words in total, never more than 30. Count them.
+- Say where in the season we are in plain words, not jargon: "three weeks in", "last week before the playoffs", "nothing on until March". Never "Week 3 of 18" - that means nothing to them.
+- Say whether it matters yet, honestly. Early season and dead weeks are real answers.
+- Then the one thing coming up worth knowing about, and roughly when.
+- Everyday words only. No standings talk, no percentages, no rankings, no playoff maths.
+- No dashes, semicolons or parentheses. Do not greet them or explain yourself. Just say it.
+- This is read for hours afterwards, so never say "tonight" or "today". Name the day.
+
+Reply in exactly this format and nothing else:
+<evidence>
+- (page age) "sentence copied from the source"
+</evidence>
+<take>the answer, without quote marks</take>
+
+If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
+
+  const request = {
+    model: MODEL,
+    max_tokens: 3000,
+    output_config: { effort: 'low' },
+    system,
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
+    messages: [{ role: 'user', content: `Where is ${sport} up to right now?` }],
+  };
+
+  let reply = await client.messages.create(request);
+  while (reply.stop_reason === 'pause_turn') {
+    reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
+  }
+  const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
+  const line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
+  const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
+  if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) return null;
+
+  // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
+  const checked = await verifyTake(client, line, evidence);
+  if (!checked.pass) return null;
+  return line;
+}
+
 export async function generateTake(client, sport, location, usedTakes, topic = '', follows = []) {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
@@ -224,6 +281,7 @@ export async function generateTake(client, sport, location, usedTakes, topic = '
 
 4. Write the take. It is what a local fan would say out loud at the bar, and the person saying it is not a fan, so it has to be easy to say and easy to understand:
 - One or two short sentences, about 20 words in total and never more than 25. Count them. Cut anything that is not needed.
+- EXCEPTION, a game worth watching: if this team, or the biggest game in the league, is playing within the next two days, that is the take. Say who plays who and name the day, say in one phrase what is at stake or how they match up, and say the one thing to watch for. A take like that may run to 35 words because it has to carry all three. Still everyday words, still no stat talk. Never say "tonight" - name the day, because this is read for hours afterwards.
 - Name the team. Mention at most one player.
 - Everyday words only. No insider slang or stat talk: say "home run" not "bomb", "losing streak" not "skid", "won it in the last inning" not "walk-off". No percentages, ratings, rankings points or playoff math. If a word would need explaining to someone who never watches ${sport}, do not use it.
 - At most one number besides a score.
@@ -329,6 +387,22 @@ export default async function handler(req, res) {
   }
 
   const cache = getCache({ namespace: 'sportsguy' });
+
+  // WHERE THE SEASON IS. Free, and never charged: it is the same answer for everyone on earth, so one
+  // generation serves the whole app for six hours. This is the thing people open the app to see when
+  // nothing in particular has happened, so putting it behind the take counter would be backwards.
+  if (req.body?.kind === 'season') {
+    const day = new Date().toISOString().slice(0, 10);
+    const key = `season:v1:${sport}:${day}`;
+    const held = await cache.get(key);
+    if (held) return res.status(200).json({ line: held, cached: true });
+    const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
+    const line = await generateSeason(client, sport);
+    if (!line) return res.status(503).json({ error: 'No season line' });
+    await cache.set(key, line, { ttl: SEASON_TTL, tags: ['season'] });
+    return res.status(200).json({ line, cached: false });
+  }
+
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
   // Followed teams change what a take is about, so they get their own shelf
   const follow = follows.length ? `:for:${follows.join(',').toLowerCase()}` : '';
