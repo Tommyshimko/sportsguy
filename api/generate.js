@@ -337,9 +337,11 @@ export default async function handler(req, res) {
   const send = (take, cached, more, takesLeft) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more, ...(takesLeft === undefined ? {} : { takesLeft }) });
 
   // Already have this take (or the pool is full) - free, no API call.
-  // `more` tells the app whether asking again can turn up something new.
-  if (n < pool.length) return send(pool[n], true, n + 1 < poolMax);
-  if (pool.length >= poolMax) return send(pool[n % pool.length], true, false);
+  // `more` tells the app whether asking again can turn up something new; when it is false the app
+  // says the city is caught up and switches the pull off. Dev mode is meant to be unlimited, so the
+  // pool is a free head start for it, never a ceiling - otherwise testing stops dead after four.
+  if (n < pool.length) return send(pool[n], true, devKey || n + 1 < poolMax);
+  if (pool.length >= poolMax && !devKey) return send(pool[n % pool.length], true, false);
 
   // A new take costs money - check the limits first
   const day = new Date().toISOString().slice(0, 10);
@@ -394,7 +396,7 @@ export default async function handler(req, res) {
     // Re-read so two people generating at once don't overwrite each other
     await addToPool(cache, poolKey, { quote: take.quote, topics: take.topics }, poolMax);
 
-    return send(take, false, n + 1 < poolMax, account?.takesLeft);
+    return send(take, false, devKey || n + 1 < poolMax, account?.takesLeft);
 
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
