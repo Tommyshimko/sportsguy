@@ -3,7 +3,7 @@ import { getCache } from '@vercel/functions';
 import { attachImages } from './_images.js';
 import { accountsReady, chargeOneTake, followedTeams, refundOneTake, whoIs } from './_account.js';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 90 };
 
 // ==================== SETTINGS ====================
 const MODEL = 'claude-sonnet-5';
@@ -260,9 +260,16 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
     const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
     let line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
     const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
-    if (!line || line === 'NO_TAKE') continue;
+    if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 110) continue;
+
+    // CHECK THE FULL ANSWER, THEN CUT IT. The other way round loses the team sports: they write long,
+    // so they always get trimmed, and trimming drops the clause a fact was resting on - the checker
+    // then fails a line it would have passed. Cutting cannot add anything, so checking first is safe.
+    const checked = await verifyTake(client, line, evidence, calendar);
+    if (!checked.pass) continue;
+
     // It writes 60 to 100 words however firmly the prompt asks for 40, so the cutting is done here
-    // rather than asked for. Trimming can only remove, so the fact-check still happens afterwards.
+    // rather than asked for.
     if (line.split(/\s+/).length > WORDS) line = await tighten(client, line);
     line = (line || '').replace(/\s*[—–]\s*/g, ', ').replace(/\s+/g, ' ').trim();   // the trimmer likes a dash; we don't
     if (!line || line.split(/\s+/).length > WORDS + 8) continue;
@@ -289,9 +296,7 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
     // prompt not to write them was not enough. (Demanding a numeral as well was too much: plenty of
     // good answers are all names and no digits.)
     if (/\b(early days|nothing settled|nothing has settled|too early to|worth keeping an eye|heating up|shaping up|anyone's guess|wide open so far|not much to)\b/i.test(line)) continue;
-    // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
-    const checked = await verifyTake(client, line, evidence, calendar);
-    if (checked.pass) return line;
+    return line;
   }
   return null;
 }
@@ -448,7 +453,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v6:${sport}:${day}`;
+    const key = `season:v7:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
