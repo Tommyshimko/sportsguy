@@ -193,6 +193,13 @@ export async function generateSeason(client, sport) {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York',
   });
+  // The checker judges days against a calendar. Without one it has nothing to check "Monday night"
+  // against and throws good lines away - football and golf both died that way before this was passed.
+  const calendar = [-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7].map(offset => {
+    const d = new Date(Date.now() + offset * 86400000);
+    const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+    return offset === 0 ? `${label} (today)` : label;
+  }).join(', ');
 
   const system = `Someone has just asked you where ${sport} (${league}) is up to. They do not follow it at all. Today is ${today}.
 
@@ -226,19 +233,22 @@ If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
     messages: [{ role: 'user', content: `Where is ${sport} up to right now?` }],
   };
 
-  let reply = await client.messages.create(request);
-  while (reply.stop_reason === 'pause_turn') {
-    reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
+  // One retry: the checker is strict on dates and a season line is mostly dates, so a good answer
+  // gets thrown out often enough that a single attempt leaves people staring at nothing.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let reply = await client.messages.create(request);
+    while (reply.stop_reason === 'pause_turn') {
+      reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
+    }
+    const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
+    const line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
+    const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
+    if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) continue;
+    // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
+    const checked = await verifyTake(client, line, evidence, calendar);
+    if (checked.pass) return line;
   }
-  const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
-  const line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
-  const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
-  if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) return null;
-
-  // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
-  const checked = await verifyTake(client, line, evidence);
-  if (!checked.pass) return null;
-  return line;
+  return null;
 }
 
 export async function generateTake(client, sport, location, usedTakes, topic = '', follows = []) {
