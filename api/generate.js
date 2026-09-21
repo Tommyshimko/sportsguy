@@ -201,20 +201,23 @@ export async function generateSeason(client, sport) {
     return offset === 0 ? `${label} (today)` : label;
   }).join(', ');
 
-  const system = `Someone has just asked you where ${sport} (${league}) is up to. They do not follow it at all. Today is ${today}.
+  const system = `You are the friend who actually follows ${sport} (${league}) and can tell someone who does not what is going on. Today is ${today}. They are smart, they just have not been paying attention. Do not talk down to them and do not pad.
 
-1. Find out. Search for where the ${league} season or ${sport} calendar actually is right now - how far in, what just happened, what is next and when. Every search result shows how old its page is; prefer pages from the last week and never trust an undated page or Wikipedia for what is happening now.
+1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
 
-2. Copy your evidence first, up to three sentences from the results, each with its page age. A fact-checker reads only these, so copy a sentence for anything you state.
+2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads only these, so copy a sentence for anything you state.
 
-3. Then answer, out loud, the way a regular at the bar would:
-- Two short sentences. About 25 words in total, never more than 30. Count them.
-- Say where in the season we are in plain words, not jargon: "three weeks in", "last week before the playoffs", "nothing on until March". Never "Week 3 of 18" - that means nothing to them.
-- Say whether it matters yet, honestly. Early season and dead weeks are real answers.
-- Then the one thing coming up worth knowing about, and roughly when.
-- Everyday words only. No standings talk, no percentages, no rankings, no playoff maths.
+3. Now SYNTHESISE. This is the whole job. Ten games might have been played; do not list them. Work out the one thing they add up to that a smart person would want to know, and say that. A favourite collapsing, a team nobody rated suddenly being real, a race tightening, one player carrying everything. Look for the pattern, not the scoreboard.
+
+4. Say it the way that friend would:
+- Two or three short sentences. About 35 words, never more than 45. Count them.
+- It MUST contain something specific and named: a team, a score, a record, a player. A sentence that would still be true next month is worthless - "early days", "nothing settled yet", "it is heating up" and "worth keeping an eye on" are the exact failures. If your answer has no name and no number in it, throw it away and write a real one.
+- Have a view. You are allowed to say a team is a fraud, that a result was luck, that nobody should care yet - but only alongside the fact that makes you say it.
+- Where in the season we are is a CLAUSE, never the point: "two weeks in and the AFC is already a mess" is right, "we are two weeks into the season" alone is not an answer.
+- Everyday words. No standings jargon, no percentages, no rankings points, no playoff maths. If a word needs explaining to someone who never watches ${sport}, cut it.
+- End with the next thing actually worth watching, and when, if there is one worth naming.
 - No dashes, semicolons or parentheses. Do not greet them or explain yourself. Just say it.
-- This is read for hours afterwards, so never say "tonight" or "today". Name the day.
+- This is read for hours afterwards, so name the day ("Sunday") rather than saying tonight or today.
 
 Reply in exactly this format and nothing else:
 <evidence>
@@ -222,15 +225,15 @@ Reply in exactly this format and nothing else:
 </evidence>
 <take>the answer, without quote marks</take>
 
-If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
+If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
 
   const request = {
     model: MODEL,
     max_tokens: 3000,
     output_config: { effort: 'low' },
     system,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
-    messages: [{ role: 'user', content: `Where is ${sport} up to right now?` }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
+    messages: [{ role: 'user', content: `What is going on in ${sport} right now? Tell me the thing that matters.` }],
   };
 
   // One retry: the checker is strict on dates and a season line is mostly dates, so a good answer
@@ -258,6 +261,11 @@ If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
       .replace(/\byesterday\b/gi, dayName(-1))
       .replace(/\btomorrow\b/gi, dayName(1));
     if (/\b(right now|currently|at the moment)\b/i.test(line)) continue;
+    // The prompt asks for something specific and named; this is what makes it stick. Without a
+    // capitalised name or a number the answer is calendar filler - "two weeks in, nothing settled
+    // yet" passed every other check and told a reader nothing while ten games went unmentioned.
+    const named = (line.match(/\b[A-Z][a-z]{2,}/g) || []).filter(w => !/^(Just|Next|The|This|That|Still|Nothing|Early|Real|Worth|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)$/.test(w));
+    if (!named.length || !/\d/.test(line)) continue;
     // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
     const checked = await verifyTake(client, line, evidence, calendar);
     if (checked.pass) return line;
@@ -417,7 +425,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v3:${sport}:${day}`;
+    const key = `season:v4:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
