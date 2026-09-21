@@ -217,9 +217,11 @@ export async function generateSeason(client, sport) {
 
   const system = `You are the friend who actually follows ${sport} (${league}) and can tell someone who does not what is going on. Today is ${today}. They are smart, they just have not been paying attention. Do not talk down to them and do not pad.
 
-1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
+1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search ${league} by name every time, because several competitions share these team names and a result from the wrong one is worse than no answer. If you want to end by naming the next fixture, spend one search on the schedule too. Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
 
 2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads ONLY these and throws the answer away if anything in it is not backed by them, so copy a sentence for every result, score, record and name you intend to use.
+
+   That goes for the colour as well as the score. Do not say HOW something happened - a free kick, a header, a late winner, carted off, from five back - unless the sentence you copied says so. Do not name the day something happened unless the source gives the date. Do not say what a result means for the table unless a source says it. These small embellishments are what keeps getting thrown out, and they are never the reason the answer is good.
 
    You know this sport, and that is the danger. Every fact in your answer has to be in the sentences you just copied, spelled the same way. Do not reach for a result, a score, a record, a win total or a past game from memory to round the story out, however sure you are - that is precisely how this fails, and it has already failed that way by adding a week one result nobody had reported to it. If you want to say a team beat someone, go and search for that game. If you cannot show it, build the answer on something you can.
 
@@ -231,7 +233,7 @@ export async function generateSeason(client, sport) {
 - Have a view. You are allowed to say a team is a fraud, that a result was luck, that nobody should care yet - but only alongside the fact that makes you say it.
 - Where in the season we are is a CLAUSE, never the point: "two weeks in and the AFC is already a mess" is right, "we are two weeks into the season" alone is not an answer.
 - Everyday words. No standings jargon, no percentages, no rankings points, no playoff maths. If a word needs explaining to someone who never watches ${sport}, cut it.
-- End with the next thing actually worth watching, and when, if there is one worth naming.
+- You may end with the next thing worth watching, but ONLY if you searched for that fixture and copied a sentence showing it. Naming who they play next, or a date, from your own knowledge is the single most common way this answer gets thrown away. If you did not look it up, just stop after the point you made. No ending is better than an invented one.
 - No dashes, semicolons or parentheses. Do not greet them or explain yourself. Just say it.
 - This is read for hours afterwards, so name the day ("Sunday") rather than saying tonight or today.
 
@@ -256,7 +258,9 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
   // gets thrown out often enough that a single attempt leaves people staring at nothing.
   // Two goes, not three: a full cycle is about 45 seconds and three would run past the function's
   // time before the third could finish, so the third attempt was never really there.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Three goes. Two was one short: a single empty reply, which happens, used up half the budget
+  // and left the sport silent. A cycle is about 35 seconds and the function has 120.
+  for (let attempt = 0; attempt < 3; attempt++) {
     let reply = await client.messages.create(request);
     while (reply.stop_reason === 'pause_turn') {
       reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
@@ -457,7 +461,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v8:${sport}:${day}`;
+    const key = `season:v9:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
