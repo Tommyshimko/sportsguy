@@ -184,10 +184,24 @@ function parseTopics(text, quote) {
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
 
+const WORDS = 42;                   // what a season line gets: a bar answer, not a column
 const SEASON_TTL = 6 * 60 * 60;      // a season doesn't move fast; one answer serves everyone for hours
 
 // Where the season is, in the words a regular would use if you sat down next to him knowing nothing.
 // This is the same for everyone on earth, so one generation serves the whole app for six hours.
+// Cut a season line to length without losing what makes it worth reading. Cheap: no search, and it
+// only ever removes, so nothing new can sneak in past the fact-check that follows.
+async function tighten(client, line) {
+  const response = await client.messages.create({
+    model: CHECKER_MODEL,
+    max_tokens: 400,
+    output_config: { effort: 'low' },
+    system: `Cut this to under ${WORDS} words. Keep the names, the numbers and the point. Drop the second storyline, the caveats and anything a person would skip. Do not add anything, do not soften it, keep the voice. No dashes, semicolons or parentheses. Reply with the shortened line and nothing else.`,
+    messages: [{ role: 'user', content: line }],
+  });
+  return response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^"|"$/g, '');
+}
+
 export async function generateSeason(client, sport) {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
@@ -207,10 +221,10 @@ export async function generateSeason(client, sport) {
 
 2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads only these, so copy a sentence for anything you state.
 
-3. Now SYNTHESISE. This is the whole job. Ten games might have been played; do not list them. Work out the one thing they add up to that a smart person would want to know, and say that. A favourite collapsing, a team nobody rated suddenly being real, a race tightening, one player carrying everything. Look for the pattern, not the scoreboard.
+3. Now SYNTHESISE, and pick ONE. This is the whole job. Ten games might have been played; do not list them and do not hand over three storylines. Work out the single most interesting thing they add up to and tell that one properly, with the detail that makes it land. A favourite collapsing, a team nobody rated suddenly being real, a race tightening, one player carrying everything. If you catch yourself writing "meanwhile", or a second "and" joining another subject, you are listing instead of choosing. Look for the pattern, not the scoreboard.
 
 4. Say it the way that friend would:
-- Two or three short sentences. About 35 words, never more than 45. Count them.
+- Two or three sentences, about 40 words, never more than 55. Count them. One idea told well beats three crammed in.
 - It MUST contain something specific and named: a team, a score, a record, a player. A sentence that would still be true next month is worthless - "early days", "nothing settled yet", "it is heating up" and "worth keeping an eye on" are the exact failures. If your answer has no name and no number in it, throw it away and write a real one.
 - Have a view. You are allowed to say a team is a fraud, that a result was luck, that nobody should care yet - but only alongside the fact that makes you say it.
 - Where in the season we are is a CLAUSE, never the point: "two weeks in and the AFC is already a mess" is right, "we are two weeks into the season" alone is not an answer.
@@ -246,7 +260,12 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
     const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
     let line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
     const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
-    if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) continue;
+    if (!line || line === 'NO_TAKE') continue;
+    // It writes 60 to 100 words however firmly the prompt asks for 40, so the cutting is done here
+    // rather than asked for. Trimming can only remove, so the fact-check still happens afterwards.
+    if (line.split(/\s+/).length > WORDS) line = await tighten(client, line);
+    line = (line || '').replace(/\s*[—–]\s*/g, ', ').replace(/\s+/g, ' ').trim();   // the trimmer likes a dash; we don't
+    if (!line || line.split(/\s+/).length > WORDS + 8) continue;
     // This answer is held for hours, so anything measured from the clock is a lie by the time most
     // people read it. Asking in the prompt was not enough - one came back with "Giants at Rams
     // tonight" - and throwing it away was worse: football HAS a game tonight, so every attempt
@@ -429,7 +448,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v5:${sport}:${day}`;
+    const key = `season:v6:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
