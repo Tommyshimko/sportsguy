@@ -265,7 +265,11 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
     // capitalised name or a number the answer is calendar filler - "two weeks in, nothing settled
     // yet" passed every other check and told a reader nothing while ten games went unmentioned.
     const named = (line.match(/\b[A-Z][a-z]{2,}/g) || []).filter(w => !/^(Just|Next|The|This|That|Still|Nothing|Early|Real|Worth|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)$/.test(w));
-    if (!named.length || !/\d/.test(line)) continue;
+    if (!named.length) continue;
+    // The phrases that mean nothing. These are what calendar filler is made of, and asking the
+    // prompt not to write them was not enough. (Demanding a numeral as well was too much: plenty of
+    // good answers are all names and no digits.)
+    if (/\b(early days|nothing settled|nothing has settled|too early to|worth keeping an eye|heating up|shaping up|anyone's guess|wide open so far|not much to)\b/i.test(line)) continue;
     // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
     const checked = await verifyTake(client, line, evidence, calendar);
     if (checked.pass) return line;
@@ -425,7 +429,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v4:${sport}:${day}`;
+    const key = `season:v5:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
