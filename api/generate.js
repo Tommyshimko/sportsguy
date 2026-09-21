@@ -313,6 +313,10 @@ export default async function handler(req, res) {
   const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
   // Signed in? Then the balance lives on the server and the phone can't edit it.
   const userId = accountsReady() ? await whoIs(req.body?.token) : null;
+  // Dev mode is unlimited takes, and that has to hold HERE too: for a signed-in tester the balance
+  // lives on the server, so a client-only flag would still be charged and would start 402ing - which
+  // showed up as a paywall saying "you're on unlimited". TestFlight only; remove with Dev mode.
+  const devKey = req.body?.dev === DEV_KEY;
   const follows = userId ? await followedTeams(userId, sport) : [];
 
   if (!LEAGUES[sport] || location.length < 2) {
@@ -345,7 +349,7 @@ export default async function handler(req, res) {
   const ipKey = `ip:${ip}:${hour}`;
 
   const [dayCount, ipCount] = await Promise.all([readCount(cache, dayKey), readCount(cache, ipKey)]);
-  const hourly = req.body?.dev === DEV_KEY ? DEV_HOURLY_LIMIT : IP_HOURLY_LIMIT;
+  const hourly = devKey ? DEV_HOURLY_LIMIT : IP_HOURLY_LIMIT;
   if (dayCount >= DAILY_LIMIT || ipCount >= hourly) {
     console.warn('Limit hit', { dayCount, ipCount, ip });
     if (pool.length) return send(pool[n % pool.length], true, false);
@@ -363,7 +367,7 @@ export default async function handler(req, res) {
 
     // Signed in: take one off the balance first, and give it back if no take comes out
     let account;
-    if (userId) {
+    if (userId && !devKey) {
       account = await chargeOneTake(userId);
       if (!account) return res.status(402).json({ error: 'Out of takes' });
     }
@@ -373,7 +377,7 @@ export default async function handler(req, res) {
       await bumpCount(cache, dayKey, 26 * 60 * 60);
       take = await generateTake(client, sport, location, used, topic, follows);
     }
-    if (!take && userId) await refundOneTake(userId);
+    if (!take && userId && !devKey) await refundOneTake(userId);
 
     if (!take) {
       return res.status(502).json({ error: 'No take came back' });
