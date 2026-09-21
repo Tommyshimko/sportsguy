@@ -235,7 +235,7 @@ If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
 
   // One retry: the checker is strict on dates and a season line is mostly dates, so a good answer
   // gets thrown out often enough that a single attempt leaves people staring at nothing.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     let reply = await client.messages.create(request);
     while (reply.stop_reason === 'pause_turn') {
       reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
@@ -244,6 +244,9 @@ If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
     const line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
     const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
     if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) continue;
+    // This answer is held for hours, so anything clock-relative is a lie by the time someone reads
+    // it. Asking nicely in the prompt was not enough: one came back saying "Giants at Rams tonight".
+    if (/\b(tonight|today|tomorrow|yesterday|last night|right now|currently)\b/i.test(line)) continue;
     // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
     const checked = await verifyTake(client, line, evidence, calendar);
     if (checked.pass) return line;
