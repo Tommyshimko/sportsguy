@@ -241,12 +241,23 @@ If you cannot find out where the season is, reply with <take>NO_TAKE</take>.`;
       reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
     }
     const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
-    const line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
+    let line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
     const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
     if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 45) continue;
-    // This answer is held for hours, so anything clock-relative is a lie by the time someone reads
-    // it. Asking nicely in the prompt was not enough: one came back saying "Giants at Rams tonight".
-    if (/\b(tonight|today|tomorrow|yesterday|last night|right now|currently)\b/i.test(line)) continue;
+    // This answer is held for hours, so anything measured from the clock is a lie by the time most
+    // people read it. Asking in the prompt was not enough - one came back with "Giants at Rams
+    // tonight" - and throwing it away was worse: football HAS a game tonight, so every attempt
+    // reached for the word and the sport just went silent. Pin it to a real weekday instead, the
+    // same way the takes do, and only give up on the vaguer ones there is no rewriting.
+    const dayName = offset => new Date(Date.now() + offset * 86400000)
+      .toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
+    line = line
+      .replace(/\blast night\b/gi, `${dayName(-1)} night`)
+      .replace(/\btonight\b/gi, `${dayName(0)} night`)
+      .replace(/\btoday\b/gi, dayName(0))
+      .replace(/\byesterday\b/gi, dayName(-1))
+      .replace(/\btomorrow\b/gi, dayName(1));
+    if (/\b(right now|currently|at the moment)\b/i.test(line)) continue;
     // Same checker the takes get: it reads the evidence only, and a season is all dates and facts
     const checked = await verifyTake(client, line, evidence, calendar);
     if (checked.pass) return line;
@@ -406,7 +417,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v2:${sport}:${day}`;
+    const key = `season:v3:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
