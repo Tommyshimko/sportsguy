@@ -470,13 +470,22 @@ export default async function handler(req, res) {
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
     const key = `season:v10:${sport}:${day}`;
+    const lastKey = `season:v10:last:${sport}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     const line = await generateSeason(client, sport);
-    if (!line) return res.status(503).json({ error: 'No season line' });
-    await cache.set(key, line, { ttl: SEASON_TTL, tags: ['season'] });
-    return res.status(200).json({ line, cached: false });
+    if (line) {
+      await cache.set(key, line, { ttl: SEASON_TTL, tags: ['season'] });
+      await cache.set(lastKey, line, { ttl: 2 * 24 * 60 * 60, tags: ['season'] });
+      return res.status(200).json({ line, cached: false });
+    }
+    // Writing one is a coin flip against a strict fact-checker, and a sport that loses the toss used
+    // to go blank for six hours. A season does not turn over that fast, so yesterday's answer is a
+    // far better thing to show than nothing. Only a sport that has never had one comes back empty.
+    const lastGood = await cache.get(lastKey);
+    if (lastGood) return res.status(200).json({ line: lastGood, cached: true, stale: true });
+    return res.status(503).json({ error: 'No season line' });
   }
 
   const poolMax = topic ? TOPIC_POOL_MAX : POOL_MAX;
