@@ -215,7 +215,7 @@ export async function generateSeason(client, sport) {
     return offset === 0 ? `${label} (today)` : label;
   }).join(', ');
 
-  const system = `You are the friend who actually follows ${sport} (${league}) and can tell someone who does not what is going on. Today is ${today}. They are smart, they just have not been paying attention. Do not talk down to them and do not pad.
+  const brief = plain => `You are the friend who actually follows ${sport} (${league}) and can tell someone who does not what is going on. Today is ${today}. They are smart, they just have not been paying attention. Do not talk down to them and do not pad.
 
 1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search ${league} by name every time, because several competitions share these team names and a result from the wrong one is worse than no answer. If you want to end by naming the next fixture, spend one search on the schedule too. Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
 
@@ -243,7 +243,11 @@ Reply in exactly this format and nothing else:
 </evidence>
 <take>the answer, without quote marks</take>
 
-If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
+If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.${plain ? `
+
+LAST ATTEMPT, SO PLAY IT SAFE. Earlier goes were thrown out for saying things the sources did not. Report ONLY what your copied sentences literally say. No colour, no how-it-happened, no what-it-means, no day names the sources do not give, and do NOT end with what is next. Two sentences of plain fact with the names and numbers in them. A flat true answer is worth far more than a good one that gets binned.` : ''}`;
+
+  const system = brief(false);
 
   const request = {
     model: MODEL,
@@ -261,9 +265,13 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
   // Three goes. Two was one short: a single empty reply, which happens, used up half the budget
   // and left the sport silent. A cycle is about 35 seconds and the function has 120.
   for (let attempt = 0; attempt < 3; attempt++) {
-    let reply = await client.messages.create(request);
+    // The last go drops to a brief that is hard to fail. The checker is strict and every attempt
+    // embellishes something different, so without this a sport just goes silent for six hours -
+    // which is what kept happening to soccer. Plainer and true beats better and binned.
+    const attemptRequest = attempt === 2 ? { ...request, system: brief(true) } : request;
+    let reply = await client.messages.create(attemptRequest);
     while (reply.stop_reason === 'pause_turn') {
-      reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
+      reply = await client.messages.create({ ...attemptRequest, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
     }
     const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
     let line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
@@ -461,7 +469,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v9:${sport}:${day}`;
+    const key = `season:v10:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
