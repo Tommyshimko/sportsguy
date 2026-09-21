@@ -3,7 +3,7 @@ import { getCache } from '@vercel/functions';
 import { attachImages } from './_images.js';
 import { accountsReady, chargeOneTake, followedTeams, refundOneTake, whoIs } from './_account.js';
 
-export const config = { maxDuration: 90 };
+export const config = { maxDuration: 120 };
 
 // ==================== SETTINGS ====================
 const MODEL = 'claude-sonnet-5';
@@ -219,7 +219,9 @@ export async function generateSeason(client, sport) {
 
 1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
 
-2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads only these, so copy a sentence for anything you state.
+2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads ONLY these and throws the answer away if anything in it is not backed by them, so copy a sentence for every result, score, record and name you intend to use.
+
+   You know this sport, and that is the danger. Every fact in your answer has to be in the sentences you just copied, spelled the same way. Do not reach for a result, a score, a record, a win total or a past game from memory to round the story out, however sure you are - that is precisely how this fails, and it has already failed that way by adding a week one result nobody had reported to it. If you want to say a team beat someone, go and search for that game. If you cannot show it, build the answer on something you can.
 
 3. Now SYNTHESISE, and pick ONE. This is the whole job. Ten games might have been played; do not list them and do not hand over three storylines. Work out the single most interesting thing they add up to and tell that one properly, with the detail that makes it land. A favourite collapsing, a team nobody rated suddenly being real, a race tightening, one player carrying everything. If you catch yourself writing "meanwhile", or a second "and" joining another subject, you are listing instead of choosing. Look for the pattern, not the scoreboard.
 
@@ -252,7 +254,9 @@ If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.`;
 
   // One retry: the checker is strict on dates and a season line is mostly dates, so a good answer
   // gets thrown out often enough that a single attempt leaves people staring at nothing.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // Two goes, not three: a full cycle is about 45 seconds and three would run past the function's
+  // time before the third could finish, so the third attempt was never really there.
+  for (let attempt = 0; attempt < 2; attempt++) {
     let reply = await client.messages.create(request);
     while (reply.stop_reason === 'pause_turn') {
       reply = await client.messages.create({ ...request, messages: [{ role: 'user', content: request.messages[0].content }, { role: 'assistant', content: reply.content }] });
@@ -453,7 +457,7 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v7:${sport}:${day}`;
+    const key = `season:v8:${sport}:${day}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
