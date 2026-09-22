@@ -43,18 +43,21 @@
     </main>
 
     <script>
-      // Paste the public TestFlight link here and this page starts forwarding on its own. Until it
-      // is set, the page says so plainly rather than sending anyone to a dead link.
-      var TESTFLIGHT = '';
+      var TESTFLIGHT = 'https://testflight.apple.com/join/hDGJhjs2';
 
+      // TestFlight is an iPhone app, so it is only worth sending an iPhone there. Everyone else -
+      // a laptop, an Android, a link preview crawler - gets the thing they can actually use.
       var go = document.getElementById('go');
-      if (TESTFLIGHT) {
+      var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (iOS && TESTFLIGHT) {
         go.href = TESTFLIGHT;
         go.textContent = 'Open TestFlight';
         location.replace(TESTFLIGHT);
       } else {
         document.getElementById('head').textContent = 'Sound like a SportsGuy.';
-        document.getElementById('why').textContent = 'The beta is nearly open. In the meantime, try it in your browser.';
+        document.getElementById('why').textContent = 'The iPhone beta is on TestFlight. On anything else, it runs in the browser.';
         go.href = 'https://sportsguy.xyz/app';
         go.textContent = 'Try it here';
       }
