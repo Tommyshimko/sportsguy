@@ -184,7 +184,7 @@ function parseTopics(text, quote) {
 
 const TEAM_SPORTS = ['football', 'baseball', 'basketball', 'soccer'];
 
-const WORDS = 42;                   // what a season line gets: a bar answer, not a column
+const WORDS = 52;                   // enough to carry where we are, what is next, and why
 const SEASON_TTL = 6 * 60 * 60;      // a season doesn't move fast; one answer serves everyone for hours
 
 // Where the season is, in the words a regular would use if you sat down next to him knowing nothing.
@@ -196,7 +196,7 @@ async function tighten(client, line) {
     model: CHECKER_MODEL,
     max_tokens: 400,
     output_config: { effort: 'low' },
-    system: `Cut this to under ${WORDS} words. Keep the names, the numbers and the point. Drop the second storyline, the caveats and anything a person would skip. Do not add anything, do not soften it, keep the voice. No dashes, semicolons or parentheses. Reply with the shortened line and nothing else.`,
+    system: `Cut this to under ${WORDS} words. KEEP where the season is, the fixture and its date, and why it matters - those are the whole point. Drop caveats, hedging, background and anything a person would skip. Do not add anything, do not soften it, keep the voice. No dashes, semicolons or parentheses. Reply with the shortened line and nothing else.`,
     messages: [{ role: 'user', content: line }],
   });
   return response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^"|"$/g, '');
@@ -215,27 +215,29 @@ export async function generateSeason(client, sport) {
     return offset === 0 ? `${label} (today)` : label;
   }).join(', ');
 
-  const brief = plain => `You are the friend who actually follows ${sport} (${league}) and can tell someone who does not what is going on. Today is ${today}. They are smart, they just have not been paying attention. Do not talk down to them and do not pad.
+  const brief = plain => `You are the friend who actually follows ${sport} (${league}) and can bring someone up to speed who has not been paying attention. They are smart, they just do not follow it. Today is ${today}.
 
-1. Find out what has ACTUALLY HAPPENED. Search for the real results of the last few days - "${league} scores ${today}", "${league} results this weekend", "${league} biggest upsets this week". Search ${league} by name every time, because several competitions share these team names and a result from the wrong one is worse than no answer. If you want to end by naming the next fixture, spend one search on the schedule too. Search two or three different ways so you see the whole picture, not one game. If a tournament is on, get the leaderboard. Every search result shows how old its page is; use pages from the last three days and never an undated page or Wikipedia for what just happened.
+They want to know FOUR things, in this order, and nothing else:
+  1. Where the season is. How far in, what stage, does it matter yet.
+  2. What is coming up. The next games or events that are actually on.
+  3. Which of those is worth watching, and why that one.
+  4. Where the noise is. The team, player or story everyone is talking about right now.
 
-2. Copy your evidence first - up to four sentences from the results, each with its page age. A fact-checker reads ONLY these and throws the answer away if anything in it is not backed by them, so copy a sentence for every result, score, record and name you intend to use.
+1. GO AND FIND ALL FOUR. Several searches, not one. Where the ${league} season stands right now. The schedule for the next seven days - "${league} schedule this week", "${league} games ${today}" - because the fixtures are the heart of this answer and you may NOT supply them from memory. Then what people are actually talking about. Search ${league} by name every time: other competitions share these team names.
 
-   That goes for the colour as well as the score. Do not say HOW something happened - a free kick, a header, a late winner, carted off, from five back - unless the sentence you copied says so. Do not name the day something happened unless the source gives the date. Do not say what a result means for the table unless a source says it. These small embellishments are what keeps getting thrown out, and they are never the reason the answer is good.
+2. Copy your evidence first, up to five sentences from the results, each with its page age. A fact-checker reads ONLY these and throws the answer away if anything is not backed by them. Copy a sentence for every fixture, date, record and name you intend to use. Prefer pages from the last week; never an undated page or Wikipedia for what is happening now.
 
-   You know this sport, and that is the danger. Every fact in your answer has to be in the sentences you just copied, spelled the same way. Do not reach for a result, a score, a record, a win total or a past game from memory to round the story out, however sure you are - that is precisely how this fails, and it has already failed that way by adding a week one result nobody had reported to it. If you want to say a team beat someone, go and search for that game. If you cannot show it, build the answer on something you can.
+   You know this sport, and that is the danger. Every fact has to be in the sentences you copied, spelled the same way. Do not reach for a result, a record, a fixture or a date from memory to round it out, however sure you are - it has already failed that way by inventing a game nobody had reported. Do not say HOW something happened, or WHICH DAY, unless the copied sentence says so.
 
-3. Now SYNTHESISE, and pick ONE. This is the whole job. Ten games might have been played; do not list them and do not hand over three storylines. Work out the single most interesting thing they add up to and tell that one properly, with the detail that makes it land. A favourite collapsing, a team nobody rated suddenly being real, a race tightening, one player carrying everything. If you catch yourself writing "meanwhile", or a second "and" joining another subject, you are listing instead of choosing. Look for the pattern, not the scoreboard.
-
-4. Say it the way that friend would:
-- Two or three sentences, about 40 words, never more than 55. Count them. One idea told well beats three crammed in.
-- It MUST contain something specific and named: a team, a score, a record, a player. A sentence that would still be true next month is worthless - "early days", "nothing settled yet", "it is heating up" and "worth keeping an eye on" are the exact failures. If your answer has no name and no number in it, throw it away and write a real one.
-- Have a view. You are allowed to say a team is a fraud, that a result was luck, that nobody should care yet - but only alongside the fact that makes you say it.
-- Where in the season we are is a CLAUSE, never the point: "two weeks in and the AFC is already a mess" is right, "we are two weeks into the season" alone is not an answer.
-- Everyday words. No standings jargon, no percentages, no rankings points, no playoff maths. If a word needs explaining to someone who never watches ${sport}, cut it.
-- You may end with the next thing worth watching, but ONLY if you searched for that fixture and copied a sentence showing it. Naming who they play next, or a date, from your own knowledge is the single most common way this answer gets thrown away. If you did not look it up, just stop after the point you made. No ending is better than an invented one.
-- No dashes, semicolons or parentheses. Do not greet them or explain yourself. Just say it.
-- This is read for hours afterwards, so name the day ("Sunday") rather than saying tonight or today.
+3. Write it the way that friend would, out loud:
+- Three or four sentences, about 45 words, never more than 55. Count them.
+- Open with where the season is in plain words: "three weeks in", "last week before the playoffs", "nothing on until March". Never "Week 3 of 18".
+- Name the actual game or event worth watching AND when it is. This is the part they came for. If you could not find a fixture, say what is next in the calendar instead, and say you mean roughly.
+- Say where the hype is and why, in one clause. A team nobody rated, a player carrying everything, a rivalry, a mess.
+- Everyday words only. No standings jargon, no percentages, no rankings points, no playoff maths.
+- Do not hand over a news story instead. A court case or a contract is not what is going on in the sport unless it changes who plays.
+- No dashes, semicolons or parentheses. Do not greet them or explain yourself.
+- This is read for hours, so name the day ("Sunday") rather than saying tonight or today.
 
 Reply in exactly this format and nothing else:
 <evidence>
@@ -245,7 +247,7 @@ Reply in exactly this format and nothing else:
 
 If the searches turn up nothing solid, reply with <take>NO_TAKE</take>.${plain ? `
 
-LAST ATTEMPT, SO PLAY IT SAFE. Earlier goes were thrown out for saying things the sources did not. Report ONLY what your copied sentences literally say. No colour, no how-it-happened, no what-it-means, no day names the sources do not give, and do NOT end with what is next. Two sentences of plain fact with the names and numbers in them. A flat true answer is worth far more than a good one that gets binned.` : ''}`;
+LAST ATTEMPT, SO PLAY IT SAFE. Earlier goes were thrown out for saying things the sources did not. Report ONLY what your copied sentences literally say: where the season is, and the next fixture you actually found with its date. Drop the hype sentence if you cannot support it. A flat true answer is worth far more than a good one that gets binned.` : ''}`;
 
   const system = brief(false);
 
@@ -469,8 +471,8 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v10:${sport}:${day}`;
-    const lastKey = `season:v10:last:${sport}`;
+    const key = `season:v11:${sport}:${day}`;
+    const lastKey = `season:v11:last:${sport}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
