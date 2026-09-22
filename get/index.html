@@ -45,21 +45,38 @@
     <script>
       var TESTFLIGHT = 'https://testflight.apple.com/join/hDGJhjs2';
 
-      // TestFlight is an iPhone app, so it is only worth sending an iPhone there. Everyone else -
-      // a laptop, an Android, a link preview crawler - gets the thing they can actually use.
+      // TestFlight is an iPhone app, so it is only worth sending an iPhone there. Everyone else - a
+      // laptop, an Android, a link preview crawler - gets the thing they can actually use. And even
+      // an iPhone only goes if the beta is open: see /api/beta. A crawler never runs any of this, so
+      // the card above is what unfurls either way.
       var go = document.getElementById('go');
+      var head = document.getElementById('head');
+      var why = document.getElementById('why');
       var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-      if (iOS && TESTFLIGHT) {
-        go.href = TESTFLIGHT;
-        go.textContent = 'Open TestFlight';
-        location.replace(TESTFLIGHT);
-      } else {
-        document.getElementById('head').textContent = 'Sound like a SportsGuy.';
-        document.getElementById('why').textContent = 'The iPhone beta is on TestFlight. On anything else, it runs in the browser.';
+      function inTheBrowser(note) {
+        head.textContent = 'Sound like a SportsGuy.';
+        why.textContent = note;
         go.href = 'https://sportsguy.xyz/app';
         go.textContent = 'Try it here';
+      }
+
+      if (!iOS) {
+        inTheBrowser('The iPhone beta is on TestFlight. On anything else, it runs in the browser.');
+      } else {
+        fetch('/api/beta')
+          .then(function (r) { return r.json(); })
+          .then(function (beta) {
+            if (beta.open) {
+              go.href = beta.link || TESTFLIGHT;
+              go.textContent = 'Open TestFlight';
+              location.replace(go.href);
+            } else {
+              inTheBrowser('The TestFlight beta opens as soon as Apple approves the build. It runs in your browser in the meantime.');
+            }
+          })
+          .catch(function () { location.replace(TESTFLIGHT); });
       }
     </script>
   </body>
