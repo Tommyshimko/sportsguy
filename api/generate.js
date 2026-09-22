@@ -472,7 +472,10 @@ export default async function handler(req, res) {
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
     const key = `season:v11:${sport}:${day}`;
-    const lastKey = `season:v11:last:${sport}`;
+    // Deliberately NOT versioned: the whole point of the last-good answer is to cover a failure, and
+    // the likeliest moment to fail is right after the wording changes, which is exactly when a
+    // versioned fallback store would be empty. Golf came back blank that way.
+    const lastKey = `season:last:${sport}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
