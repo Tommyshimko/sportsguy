@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getCache } from '@vercel/functions';
+import { getCache, waitUntil } from '@vercel/functions';
 import { attachImages } from './_images.js';
 import { accountsReady, chargeOneTake, followedTeams, refundOneTake, whoIs } from './_account.js';
 
@@ -486,6 +486,37 @@ export default async function handler(req, res) {
     const lastKey = `season:last2:${sport}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
+
+    // NEVER MAKE SOMEONE WAIT FOR ONE. Writing a season line is up to three searched, fact-checked
+    // attempts - thirty seconds to two minutes - and the fresh answer only lives six hours, so by any
+    // morning every sport is cold. Switching sport then sat there showing nothing at all for the
+    // whole of that time, which on a phone is indistinguishable from the button being broken.
+    // So the last good answer goes back AT ONCE and a fresh one is written behind it for the next
+    // person. A season does not turn over in six hours; yesterday's line is a fine thing to read
+    // while today's is being checked.
+    const lastGood = await cache.get(lastKey);
+    if (lastGood) {
+      const busyKey = `season:writing:${sport}`;
+      if (!(await cache.get(busyKey))) {
+        // Only one writer at a time, or a burst of switches is a burst of generations
+        await cache.set(busyKey, 1, { ttl: 180 });
+        waitUntil((async () => {
+          try {
+            const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
+            const fresh = await generateSeason(client, sport);
+            if (fresh) {
+              await cache.set(key, fresh, { ttl: SEASON_TTL, tags: ['season'] });
+              await cache.set(lastKey, fresh, { ttl: 2 * 24 * 60 * 60, tags: ['season'] });
+            }
+          } catch {} finally {
+            await cache.delete(busyKey).catch(() => {});
+          }
+        })());
+      }
+      return res.status(200).json({ line: lastGood, cached: true, stale: true });
+    }
+
+    // A sport that has never had one has nothing to hand back, so this is the only wait left
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     const line = await generateSeason(client, sport);
     if (line) {
@@ -493,11 +524,6 @@ export default async function handler(req, res) {
       await cache.set(lastKey, line, { ttl: 2 * 24 * 60 * 60, tags: ['season'] });
       return res.status(200).json({ line, cached: false });
     }
-    // Writing one is a coin flip against a strict fact-checker, and a sport that loses the toss used
-    // to go blank for six hours. A season does not turn over that fast, so yesterday's answer is a
-    // far better thing to show than nothing. Only a sport that has never had one comes back empty.
-    const lastGood = await cache.get(lastKey);
-    if (lastGood) return res.status(200).json({ line: lastGood, cached: true, stale: true });
     return res.status(503).json({ error: 'No season line' });
   }
 
