@@ -232,7 +232,8 @@ They want to know FOUR things, in this order, and nothing else:
 3. Write it the way that friend would, out loud:
 - Three or four sentences, about 45 words, never more than 55. Count them.
 - Open with where the season is in plain words: "three weeks in", "last week before the playoffs", "nothing on until March". Never "Week 3 of 18".
-- Name the actual game or event worth watching AND when it is. This is the part they came for. If you could not find a fixture, say what is next in the calendar instead, and say you mean roughly.
+- Name the actual game or event worth watching AND WHEN IT IS, by day or date. This is the part they came for and the answer is unusable without it. If you could not find a fixture, say what is next in the calendar instead ("nothing on until March") and say you mean roughly.
+- An answer about ONE PERSON is not this. A withdrawal, an injury, a contract, a court case: none of it is what is going on in the sport unless it changes who is playing in the thing you just told them to watch. Individual sports get this wrong most - the tour is still the season, and the next tournament is still the fixture.
 - Say where the hype is and why, in one clause. A team nobody rated, a player carrying everything, a rivalry, a mess.
 - Everyday words only. No standings jargon, no percentages, no rankings points, no playoff maths.
 - Do not hand over a news story instead. A court case or a contract is not what is going on in the sport unless it changes who plays.
@@ -314,6 +315,13 @@ LAST ATTEMPT, SO PLAY IT SAFE. Earlier goes were thrown out for saying things th
     // prompt not to write them was not enough. (Demanding a numeral as well was too much: plenty of
     // good answers are all names and no digits.)
     if (/\b(early days|nothing settled|nothing has settled|too early to|worth keeping an eye|heating up|shaping up|anyone's guess|wide open so far|not much to)\b/i.test(line)) continue;
+    // SOMETHING HAS TO BE COMING UP, AND IT HAS TO HAVE A DAY ON IT. This is question two, and it is
+    // the one people actually opened the app for. Every other check can pass on an answer that never
+    // gets there: tennis came back with a player withdrawing from a tournament to recover - a real
+    // name, no filler phrases, fact-checked, and not one word about what is on or what to watch.
+    // A weekday or a month is what a fixture looks like in plain words, and the sport that is truly
+    // out of season still has one ("nothing on until March"), so this costs those nothing.
+    if (!/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(line)) continue;
     return line;
   }
   return null;
@@ -471,11 +479,11 @@ export default async function handler(req, res) {
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
     const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v11:${sport}:${day}`;
+    const key = `season:v12:${sport}:${day}`;
     // Deliberately NOT versioned: the whole point of the last-good answer is to cover a failure, and
     // the likeliest moment to fail is right after the wording changes, which is exactly when a
     // versioned fallback store would be empty. Golf came back blank that way.
-    const lastKey = `season:last:${sport}`;
+    const lastKey = `season:last2:${sport}`;
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
