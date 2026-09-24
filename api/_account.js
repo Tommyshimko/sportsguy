@@ -32,32 +32,84 @@ async function rest(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
+// FREE DAILY TAKES. Everyone signed in gets topped back up to FREE_PER_DAY once a day (UTC). A top-up
+// only ever raises the balance - someone holding more than that keeps what they have. The top-up is
+// worked out on read and only written down when a take is actually charged, so reading the balance
+// never changes anything. Needs the column in qa/2026-09-24-refilled_on.sql.
+export const FREE_PER_DAY = 5;
+const todayUTC = () => new Date().toISOString().slice(0, 10);
+
 export async function readAccount(userId) {
-  const [profile] = await rest(`profiles?id=eq.${userId}&select=takes_left,unlimited_until`);
+  const [profile] = await rest(`profiles?id=eq.${userId}&select=takes_left,unlimited_until,refilled_on`);
   if (!profile) return null;
   const unlimited = !!profile.unlimited_until && new Date(profile.unlimited_until) > new Date();
-  return { takesLeft: profile.takes_left, unlimited };
+  const stored = Number(profile.takes_left) || 0;
+  const today = todayUTC();
+  // refilled_on comes back as 'YYYY-MM-DD', so plain string order is date order
+  const refillDue = !profile.refilled_on || String(profile.refilled_on).slice(0, 10) < today;
+  const takesLeft = refillDue ? Math.max(stored, FREE_PER_DAY) : stored;
+  return { takesLeft, unlimited, stored, refillDue, today };
 }
 
 // Takes one take off the balance, and only if there is one to take. Returns what's left, or null
 // when they're out (someone on unlimited is never charged).
+//
+// Every write is conditional on the row still looking the way it did when we read it, so two taps at
+// once can't both spend the same take or both collect the same day's top-up. If the row moved under
+// us, read it again and have another go.
 export async function chargeOneTake(userId) {
-  const account = await readAccount(userId);
-  if (!account) return null;
-  if (account.unlimited) return account;
-  if (account.takesLeft <= 0) return null;
-  const [updated] = await rest(`profiles?id=eq.${userId}&takes_left=gt.0&select=takes_left`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({ takes_left: account.takesLeft - 1 }),
-  });
-  return updated ? { takesLeft: updated.takes_left, unlimited: false } : null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const account = await readAccount(userId);
+    if (!account) return null;
+    if (account.unlimited) return account;
+    if (account.takesLeft <= 0) return null;
+
+    let filter, body;
+    if (account.refillDue) {
+      // Top up and charge in one write, and only if nobody has topped up today already
+      filter = `takes_left=eq.${account.stored}&or=(refilled_on.is.null,refilled_on.lt.${account.today})`;
+      body = { takes_left: account.takesLeft - 1, refilled_on: account.today };
+    } else {
+      filter = `takes_left=eq.${account.stored}&takes_left=gt.0`;
+      body = { takes_left: account.stored - 1 };
+    }
+    const [updated] = await rest(`profiles?id=eq.${userId}&${filter}&select=takes_left`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(body),
+    });
+    if (updated) return { takesLeft: updated.takes_left, unlimited: false };
+  }
+  return null;
 }
 
 export async function refundOneTake(userId) {
-  const account = await readAccount(userId);
-  if (!account || account.unlimited) return;
-  await rest(`profiles?id=eq.${userId}`, { method: 'PATCH', body: JSON.stringify({ takes_left: account.takesLeft + 1 }) }).catch(() => {});
+  // Give back against what's actually stored (the charge already wrote today's top-up down)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const account = await readAccount(userId);
+      if (!account || account.unlimited) return;
+      const [updated] = await rest(`profiles?id=eq.${userId}&takes_left=eq.${account.stored}&select=takes_left`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ takes_left: account.stored + 1 }),
+      });
+      if (updated) return;
+    } catch {
+      return;
+    }
+  }
+}
+
+// Deletes the person's sign-in for good. Their profile and followed teams go with it (the tables
+// cascade from auth.users). Needs the service key, so it only ever runs here on the server.
+export async function deleteUser(userId) {
+  const response = await fetch(`${URL}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok && response.status !== 404) throw new Error(`supabase delete ${response.status}`);
 }
 
 // The teams this person follows, in the sport they're looking at.

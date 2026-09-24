@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Privacy · SportsGuy</title>
+    <meta name="description" content="How SportsGuy handles your information.">
+    <link rel="icon" href="/app/favicon.png">
+    <link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="/pages.css">
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="wordmark" href="/" aria-label="SportsGuy home"><span class="s">SPORTS</span><span class="g">GUY</span></a>
+      </header>
+      <main>
+        <h1>Privacy</h1>
+        <p class="meta">Effective September 24, 2026</p>
+
+        <p class="lede">SportsGuy gives you a one-line sports take you can actually say out loud. To do that it needs to know a little about you, mostly which city you're in and which sport you care about. Here's everything, in plain words.</p>
+        <p>SportsGuy is run by Tommy Shimko ("we", "us"). Questions? Email <a class="email" href="mailto:tommyshimko@gmail.com">tommyshimko@gmail.com</a>.</p>
+
+        <h2>The short version</h2>
+        <ul>
+          <li>No ads. No tracking. No analytics. We don't sell or share your data with anyone for marketing.</li>
+          <li>An account is optional. You can use SportsGuy without one.</li>
+          <li>To write a take, we send your city, your sport and the teams you follow to Anthropic's Claude AI.</li>
+          <li>You can delete your account, and everything tied to it, any time.</li>
+        </ul>
+
+        <h2>What we collect</h2>
+        <h3>Your account (optional)</h3>
+        <p>If you sign in, with Apple, with Google, or with a code we email you, we keep your email address and an account ID. If you use Sign in with Apple and choose to hide your email, we only get Apple's relay address. Accounts are stored with our database provider, Supabase.</p>
+        <p>With an account we also keep the teams you follow and how many takes you have left, so they carry across your devices.</p>
+
+        <h3>Your city</h3>
+        <p>SportsGuy writes takes about your local teams, so it needs a city. You can give it one of two ways:</p>
+        <ul>
+          <li><strong>Use my location.</strong> If you allow it, your phone gets an approximate location and turns it into a city name <em>on your phone</em>. Only the city name leaves your device, never your coordinates.</li>
+          <li><strong>Type it in.</strong> As you type, what you've typed is sent to two free lookup services, <a href="https://photon.komoot.io">photon.komoot.io</a> and <a href="https://api.zippopotam.us">api.zippopotam.us</a>, to suggest matching cities and ZIP codes.</li>
+        </ul>
+
+        <h3>What gets sent to write a take</h3>
+        <p>When you ask for a take, your city, the sport you picked and the teams you follow are sent to our server, and from there to <strong>Anthropic's Claude AI</strong>, which searches today's sports news and writes the take. Anthropic doesn't use data sent through its API to train its models. We don't send your name or email to Anthropic.</p>
+
+        <h3>Pictures</h3>
+        <p>Team logos and player photos load straight from ESPN's image servers, so ESPN sees a normal web request from your device (like any image on the web).</p>
+
+        <h3>Hosting</h3>
+        <p>Our website and server run on Vercel. Like any web host, Vercel sees your IP address when your phone talks to our server. We use it to keep the service running and to stop abuse (for example, limiting how many takes one connection can ask for in an hour). We don't use it to identify you or build a profile.</p>
+
+        <h2>What we don't do</h2>
+        <ul>
+          <li>No advertising, and no ad or tracking SDKs in the app.</li>
+          <li>No analytics tools following what you tap.</li>
+          <li>No selling, renting or trading your information.</li>
+          <li>No tracking you across other apps or websites.</li>
+        </ul>
+
+        <h2>How long we keep it</h2>
+        <p>We keep your account information until you delete your account. Takes themselves are shared across everyone in the same city and aren't tied to you. Our host keeps short-lived server logs for running and securing the service.</p>
+
+        <h2>Deleting your account</h2>
+        <p>In the app, go to <strong>Settings &gt; Delete account</strong>. That removes your account, your followed teams and your take balance right away. You can also ask us by email; see <a href="/delete-account">how to delete your account</a>.</p>
+
+        <h2>Kids</h2>
+        <p>SportsGuy isn't meant for children under 13, and we don't knowingly collect information from them. If you think a child has signed up, email us and we'll delete the account.</p>
+
+        <h2>Your rights</h2>
+        <p>Wherever you live, you can ask us for a copy of your information, to correct it, or to delete it. Just email <a class="email" href="mailto:tommyshimko@gmail.com">tommyshimko@gmail.com</a>.</p>
+
+        <h2>Changes</h2>
+        <p>If this policy changes, we'll update this page and the date at the top. If it's a big change, we'll tell you in the app.</p>
+
+        <h2>Contact</h2>
+        <p>Tommy Shimko · <a class="email" href="mailto:tommyshimko@gmail.com">tommyshimko@gmail.com</a></p>
+
+      </main>
+      <footer>
+        <nav>
+        <a href="/privacy" aria-current="page">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/support">Support</a>
+        <a href="/delete-account">Delete account</a>
+        </nav>
+        <div>SportsGuy is made by Tommy Shimko · <a class="email" href="mailto:tommyshimko@gmail.com">tommyshimko@gmail.com</a></div>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache, waitUntil } from '@vercel/functions';
 import { attachImages } from './_images.js';
-import { accountsReady, chargeOneTake, followedTeams, refundOneTake, whoIs } from './_account.js';
+import { accountsReady, followedTeams } from './_account.js';
+import { chargeTake, clientIp, PAID_HOURLY_LIMIT, peekWallet, refundTake, resolveWallet, walletReady } from './_wallet.js';
 
 export const config = { maxDuration: 120 };
 
@@ -10,10 +11,13 @@ const MODEL = 'claude-sonnet-5';
 const POOL_MAX = 4;                  // takes kept per sport + city
 const TOPIC_POOL_MAX = 2;            // takes kept per topic within a sport + city
 const POOL_TTL = 3 * 60 * 60;        // seconds a pool of takes stays fresh
-const IP_HOURLY_LIMIT = 12;          // new (paid) takes one person can trigger per hour
-const DEV_HOURLY_LIMIT = 80;         // the same, for the app's dev mode (the daily limit still applies to everyone)
-const DEV_KEY = 'sg-dev-2026';
-const DAILY_LIMIT = Number(process.env.DAILY_TAKE_LIMIT) || 150; // new (paid) takes per day, everyone combined
+const IP_HOURLY_LIMIT = 12;          // new FREE takes one IP can trigger per hour (paid takes: PAID_HOURLY_LIMIT per wallet, in _wallet.js)
+const DEV_HOURLY_LIMIT = 80;         // the same, for testers (the daily limit still applies to everyone)
+// Testers: signed-in account ids in the DEV_USER_IDS env var (comma list). Empty or unset = nobody.
+const DEV_USER_IDS = new Set(String(process.env.DEV_USER_IDS || '').split(',').map(id => id.trim()).filter(Boolean));
+// Emergency ceiling on ALL new takes per day, free and paid, everyone combined. The real limits are
+// the wallet's (api/_wallet.js): a fixed free budget a day, and paid takes that someone bought.
+const DAILY_LIMIT = Number(process.env.DAILY_TAKE_LIMIT) || 1000;
 
 const LEAGUES = {
   basketball: 'NBA',
@@ -455,12 +459,14 @@ export default async function handler(req, res) {
   const location = cleanLocation(req.body?.location || '');
   const n = Math.max(0, Math.min(1000, parseInt(req.body?.n, 10) || 0));
   const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
-  // Signed in? Then the balance lives on the server and the phone can't edit it.
-  const userId = accountsReady() ? await whoIs(req.body?.token) : null;
-  // Dev mode is unlimited takes, and that has to hold HERE too: for a signed-in tester the balance
-  // lives on the server, so a client-only flag would still be charged and would start 402ing - which
-  // showed up as a paywall saying "you're on unlimited". TestFlight only; remove with Dev mode.
-  const devKey = req.body?.dev === DEV_KEY;
+  // Whose wallet pays: the signed-in account, else the RevenueCat id the app sent, else the IP
+  const ip = clientIp(req);
+  const { walletId, userId } = await resolveWallet(req.body, ip);
+  // Testers get unlimited takes, and that has to hold HERE: for a signed-in tester the balance lives
+  // on the server, so a client-only flag would still be charged. It used to be a shared password in
+  // the request, which anyone reading this public repo could copy; now it is only the accounts listed
+  // in DEV_USER_IDS. An old app still sending `dev` in the body is fine - it's simply ignored.
+  const devKey = !!userId && DEV_USER_IDS.has(userId);
   const follows = userId ? await followedTeams(userId, sport) : [];
 
   if (!LEAGUES[sport] || location.length < 2) {
@@ -523,7 +529,15 @@ export default async function handler(req, res) {
   const follow = follows.length ? `:for:${follows.join(',').toLowerCase()}` : '';
   const poolKey = `takes:v18:${sport}:${location.toLowerCase()}${topic ? `:topic:${topic.toLowerCase()}` : ''}${follow}`;
   const pool = await readPool(cache, poolKey);
-  const send = (take, cached, more, takesLeft) => res.status(200).json({ quote: take.quote, topics: take.topics || [], cached, more, ...(takesLeft === undefined ? {} : { takesLeft }) });
+  // Every take carries the balance; `takesLeft` is the same thing as one number, for older app builds.
+  // A pool hit only reads the wallet (and leaves the balance out if that read fails).
+  const send = async (take, cached, more, wallet) => {
+    if (wallet === undefined && walletReady()) wallet = await peekWallet(walletId).catch(() => undefined);
+    return res.status(200).json({
+      quote: take.quote, topics: take.topics || [], cached, more,
+      ...(wallet ? { wallet, takesLeft: wallet.freeLeft + wallet.paid } : {}),
+    });
+  };
 
   // Already have this take (or the pool is full) - free, no API call.
   // `more` tells the app whether asking again can turn up something new; when it is false the app
@@ -535,20 +549,54 @@ export default async function handler(req, res) {
   // A new take costs money - check the limits first
   const day = new Date().toISOString().slice(0, 10);
   const hour = new Date().toISOString().slice(0, 13);
-  const ip = String(req.headers['x-forwarded-for'] || 'unknown').split(',')[0].trim();
   const dayKey = `spend:${day}`;
   const ipKey = `ip:${ip}:${hour}`;
+  const paidKey = `paid:${walletId}:${hour}`;
+  const tooMany = () => pool.length
+    ? send(pool[n % pool.length], true, false)
+    : res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
 
-  const [dayCount, ipCount] = await Promise.all([readCount(cache, dayKey), readCount(cache, ipKey)]);
+  const [dayCount, ipCount, paidCount] = await Promise.all([readCount(cache, dayKey), readCount(cache, ipKey), readCount(cache, paidKey)]);
+  // The IP brake is for FREE takes (and testers); paid takes have their own brake per wallet
   const hourly = devKey ? DEV_HOURLY_LIMIT : IP_HOURLY_LIMIT;
-  if (dayCount >= DAILY_LIMIT || ipCount >= hourly) {
+  if (dayCount >= DAILY_LIMIT || (devKey && ipCount >= hourly)) {
     console.warn('Limit hit', { dayCount, ipCount, ip });
-    if (pool.length) return send(pool[n % pool.length], true, false);
-    return res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
+    return tooMany();
   }
 
+  // PAY FOR IT FIRST. Testers are never charged. Without a working wallet nothing new is generated:
+  // failing closed is the whole point.
+  let charge = null;
+  if (!devKey) {
+    if (!walletReady()) return res.status(503).json({ error: 'Takes are unavailable right now.' });
+    try {
+      charge = await chargeTake(walletId, cache, { freeBlocked: ipCount >= hourly, paidBlocked: paidCount >= PAID_HOURLY_LIMIT });
+    } catch (error) {
+      console.error('Wallet charge failed', { walletId, error: error.message });
+      return res.status(503).json({ error: 'Could not check your takes. Try again in a bit.' });
+    }
+    if (!charge.ok) {
+      if (charge.code === 'rate') {
+        console.warn('Hourly limit hit', { ip, walletId, ipCount, paidCount });
+        return tooMany();
+      }
+      return res.status(402).json({
+        error: charge.code === 'out' ? 'Out of takes' : "Today's free takes are all used up. Get more takes, or come back tomorrow.",
+        code: charge.code,
+        wallet: charge.wallet,
+      });
+    }
+  }
+  let refunded = false;
+  const refund = async () => {
+    if (!charge || refunded) return;
+    refunded = true;
+    await refundTake(walletId, charge, cache);
+  };
+
   try {
-    await Promise.all([bumpCount(cache, dayKey, 26 * 60 * 60), bumpCount(cache, ipKey, 60 * 60)]);
+    const brakeKey = charge?.kind === 'paid' ? paidKey : ipKey;
+    await Promise.all([bumpCount(cache, dayKey, 26 * 60 * 60), bumpCount(cache, brakeKey, 60 * 60)]);
 
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
     // A take that fails the checks is thrown away, so give it one more go before giving up
@@ -556,21 +604,13 @@ export default async function handler(req, res) {
     const cityTakes = topic ? await readPool(cache, `takes:v18:${sport}:${location.toLowerCase()}`) : [];
     const used = [...pool, ...cityTakes].map(entry => entry.quote);
 
-    // Signed in: take one off the balance first, and give it back if no take comes out
-    let account;
-    if (userId && !devKey) {
-      account = await chargeOneTake(userId);
-      if (!account) return res.status(402).json({ error: 'Out of takes' });
-    }
-
     let take = await generateTake(client, sport, location, used, topic, follows);
     if (!take) {
       await bumpCount(cache, dayKey, 26 * 60 * 60);
       take = await generateTake(client, sport, location, used, topic, follows);
     }
-    if (!take && userId && !devKey) await refundOneTake(userId);
-
     if (!take) {
+      await refund();
       return res.status(502).json({ error: 'No take came back' });
     }
     await attachImages(take.topics, sport, cache);
@@ -585,9 +625,10 @@ export default async function handler(req, res) {
     // Re-read so two people generating at once don't overwrite each other
     await addToPool(cache, poolKey, { quote: take.quote, topics: take.topics }, poolMax);
 
-    return send(take, false, devKey || n + 1 < poolMax, account?.takesLeft);
+    return send(take, false, devKey || n + 1 < poolMax, charge?.wallet);
 
   } catch (error) {
+    await refund().catch(() => {});
     if (error instanceof Anthropic.RateLimitError) {
       console.error('Claude rate limit:', error.message);
       return res.status(429).json({ error: 'Too many takes right now. Try again in a bit.' });
