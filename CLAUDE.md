@@ -236,3 +236,10 @@ Claude Code will handle the git commands for you.
 ---
 
 **Remember:** This project prioritizes polish and elegance over complexity. Every animation, transition, and interaction should feel considered and intentional.
+
+## sportsguy.xyz IS THE APP (2026-09-23)
+The root now serves the app itself (`vercel.json` rewrites `/` to `/app/index.html`), so the website
+and the phone are one thing. The original single-page site lives on at `/classic` (its asset paths were
+made absolute so it still works from a subfolder). `/get`, `/api/*`, `/icons/*` and `/app` are unchanged.
+The app's page carries the share-card tags itself (`public/index.html` in the app repo), so a bare
+sportsguy.xyz link still unfurls into the card.
