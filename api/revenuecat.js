@@ -9,13 +9,24 @@
 // that still answers 200. Anything that isn't a 200 makes RevenueCat retry, so a failure half way
 // through removes the record again and answers 500. Sandbox purchases credit too (App Review buys in
 // the sandbox) - they're logged with their environment so they can be told apart.
+//
+// PRO (pro_monthly / pro_annual; Google Play's "pro_monthly:monthly" is read as pro_monthly):
+//   INITIAL_PURCHASE, RENEWAL, PRODUCT_CHANGE, UNCANCELLATION, SUBSCRIPTION_EXTENDED
+//       -> pro_until = expiration_at_ms (never shortened), pro_product = the product
+//   CANCELLATION with cancel_reason CUSTOMER_SUPPORT (a refund) -> Pro ends now
+//   CANCELLATION otherwise, BILLING_ISSUE -> nothing (Pro runs to its end date)
+//   EXPIRATION -> Pro ends now, unless a later renewal already moved the end date past this one
 import { timingSafeEqual } from 'node:crypto';
-import { addPaid, forgetPurchase, isUuid, movePaid, PRODUCTS, recordPurchase, WALLET_ID, walletReady } from './_wallet.js';
+import {
+  addPaid, endPro, extendPro, forgetPurchase, isUuid, movePaid, movePro, normaliseProduct, PRO_PRODUCTS, PRODUCTS,
+  recordPurchase, WALLET_ID, walletReady,
+} from './_wallet.js';
 
 export const config = { maxDuration: 20 };
 
 const CREDIT = new Set(['NON_RENEWING_PURCHASE', 'INITIAL_PURCHASE']);
 const REFUND = new Set(['CANCELLATION', 'REFUND']);
+const PRO_ON = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION', 'SUBSCRIPTION_EXTENDED']);
 
 function authorised(header, secret) {
   const got = Buffer.from(String(header || ''));
@@ -42,11 +53,43 @@ export default async function handler(req, res) {
   if (!walletReady()) return res.status(503).json({ error: 'Wallet is not set up' });
 
   const event = req.body?.event || {};
-  const { id, type, app_user_id: wallet, product_id: product, store, environment } = event;
-  const log = { id, type, wallet, product, store, environment };
+  const { id, type, app_user_id: wallet, store, environment } = event;
+  const product = normaliseProduct(event.product_id);
+  // A plan change names the old product in product_id and the new one in new_product_id
+  const newProduct = event.new_product_id ? normaliseProduct(event.new_product_id) : null;
+  const log = { id, type, wallet, product, newProduct, store, environment };
   if (!id || !type) return res.status(200).json({ ok: true, ignored: 'no event' });
 
   try {
+    // PRO SUBSCRIPTION
+    const proProduct = [newProduct, product].find(entry => PRO_PRODUCTS.has(entry));
+    if (proProduct) {
+      if (!WALLET_ID.test(String(wallet || ''))) {
+        console.error('REVENUECAT: subscription for an unusable app_user_id', log);
+        return res.status(200).json({ ok: true, ignored: 'bad app_user_id' });
+      }
+      const expires = Number(event.expiration_at_ms);
+      const record = kind => ({ event_id: id, wallet, product: proProduct, takes: 0, kind, store: store || null });
+      let done = null;
+      if (PRO_ON.has(type)) {
+        if (!Number.isFinite(expires) || expires <= 0) {
+          console.error('REVENUECAT: subscription event without expiration_at_ms', log);
+          return res.status(200).json({ ok: true, ignored: 'no expiration' });
+        }
+        done = await once(record('subscription'), () => extendPro(wallet, expires, proProduct));
+      } else if (type === 'CANCELLATION' && event.cancel_reason === 'CUSTOMER_SUPPORT') {
+        done = await once(record('subscription-refund'), () => endPro(wallet));
+      } else if (type === 'EXPIRATION') {
+        done = await once(record('subscription-expired'), () => endPro(wallet, { unlessAfter: Number.isFinite(expires) ? expires : undefined }));
+      }
+      if (!done) {
+        console.log('RevenueCat subscription event, nothing to do', log);
+        return res.status(200).json({ ok: true, ignored: type });
+      }
+      console.log(done.duplicate ? 'RevenueCat subscription (repeat, skipped)' : 'RevenueCat subscription applied', { ...log, expires, wallet: done.result });
+      return res.status(200).json({ ok: true, duplicate: !!done.duplicate });
+    }
+
     // BOUGHT TAKES
     if (CREDIT.has(type) && PRODUCTS[product]) {
       if (!WALLET_ID.test(String(wallet || ''))) {
@@ -79,7 +122,11 @@ export default async function handler(req, res) {
       const done = await once({ event_id: id, wallet: to, product: 'transfer', takes: 0, kind: 'transfer', store: store || null },
         async () => {
           let moved = 0;
-          for (const from of fromIds) if (from !== to) moved += await movePaid(from, to);
+          for (const from of fromIds) {
+            if (from === to) continue;
+            moved += await movePaid(from, to);
+            await movePro(from, to);
+          }
           return moved;
         });
       console.log('RevenueCat transfer', { ...log, fromIds, to, moved: done.result, duplicate: !!done.duplicate, uuids: fromIds.filter(isUuid).length });

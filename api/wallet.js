@@ -1,13 +1,14 @@
 // THE BALANCE, AND MOVING IT ON SIGN-IN. POST only.
-//   {wallet, token?}                  -> 200 {freeLeft, paid, freePerDay}
+//   {wallet, token?}                  -> 200 {freeLeft, paid, freePerDay, pro, proLeft, proPerMonth, proUntil}
 //       Same identity rules as /api/generate (signed-in account, else the RevenueCat id, else the IP).
 //       Only reads: today's top-up is shown, never written.
-//   {action:'merge', from, token}     -> 200 {freeLeft, paid, freePerDay} of the signed-in account
+//   {action:'merge', from, token}     -> 200 (same shape) of the signed-in account
 //       Takes bought before signing in (on the anonymous RevenueCat id `from`) move into the account.
-//       Safe to call again: the second call finds nothing left to move. Free takes don't move.
+//       Pro comes along too (the later end date wins, this month's use is carried so it can't be
+//       reset by signing in). Safe to call again. Free takes don't move.
 //   401 merge without a valid token, 400 bad `from`, 503 wallet not set up / database trouble.
 import { whoIs } from './_account.js';
-import { clientIp, isUuid, movePaid, peekWallet, resolveWallet, WALLET_ID, walletReady } from './_wallet.js';
+import { clientIp, copyPro, isUuid, movePaid, peekWallet, resolveWallet, WALLET_ID, walletReady } from './_wallet.js';
 
 export const config = { maxDuration: 20 };
 
@@ -47,7 +48,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Nothing to merge from that id' });
       }
       const moved = await movePaid(from, userId);
-      if (moved) console.log('Wallet merged', { from, userId, moved });
+      const pro = await copyPro(from, userId);
+      if (moved || pro) console.log('Wallet merged', { from, userId, moved, pro });
       return res.status(200).json(await peekWallet(userId));
     }
 

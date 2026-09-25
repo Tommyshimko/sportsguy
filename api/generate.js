@@ -553,7 +553,7 @@ export default async function handler(req, res) {
     if (wallet === undefined && walletReady()) wallet = await peekWallet(walletId).catch(() => undefined);
     return res.status(200).json({
       quote: take.quote, topics: await forClient(take.topics, sport, cache, pictures), cached, more,
-      ...(wallet ? { wallet, takesLeft: wallet.freeLeft + wallet.paid } : {}),
+      ...(wallet ? { wallet, takesLeft: wallet.freeLeft + (wallet.proLeft || 0) + wallet.paid } : {}),
     });
   };
 
@@ -599,7 +599,9 @@ export default async function handler(req, res) {
         return tooMany();
       }
       return res.status(402).json({
-        error: charge.code === 'out' ? 'Out of takes' : "Today's free takes are all used up. Get more takes, or come back tomorrow.",
+        error: charge.code === 'out' ? 'Out of takes'
+          : charge.code === 'pro-out' ? "You've used this month's Pro takes. Get a pack, or they come back next month."
+          : "Today's free takes are all used up. Get more takes, or come back tomorrow.",
         code: charge.code,
         wallet: charge.wallet,
       });
@@ -613,7 +615,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const brakeKey = charge?.kind === 'paid' ? paidKey : ipKey;
+    const brakeKey = charge?.kind === 'paid' || charge?.kind === 'pro' ? paidKey : ipKey;
     await Promise.all([bumpCount(cache, dayKey, 26 * 60 * 60), bumpCount(cache, brakeKey, 60 * 60)]);
 
     const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
