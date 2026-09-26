@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache, waitUntil } from '@vercel/functions';
-import { attachImages } from './_images.js';
+import { attachImages, PICTURES_ON } from './_images.js';
 import { accountsReady, followedTeams } from './_account.js';
 import { chargeTake, clientIp, PAID_HOURLY_LIMIT, peekWallet, refundTake, resolveWallet, walletReady } from './_wallet.js';
 
@@ -534,7 +534,8 @@ export default async function handler(req, res) {
   const send = async (take, cached, more, wallet) => {
     if (wallet === undefined && walletReady()) wallet = await peekWallet(walletId).catch(() => undefined);
     return res.status(200).json({
-      quote: take.quote, topics: take.topics || [], cached, more,
+      // Pool takes written before pictures were switched off still carry ESPN links, so strip on the way out
+      quote: take.quote, topics: (take.topics || []).map(t => PICTURES_ON ? t : { ...t, image: undefined }), cached, more,
       ...(wallet ? { wallet, takesLeft: wallet.freeLeft + wallet.paid } : {}),
     });
   };
@@ -616,7 +617,8 @@ export default async function handler(req, res) {
     await attachImages(take.topics, sport, cache);
     // Tommy's rule: every highlighted PLAYER shows his headshot. If we can't vouch for a photo, the
     // player simply isn't offered as a topic (his name stays in the take, just not highlighted).
-    const withPhotos = take.topics.filter(entry => entry.kind !== 'player' || entry.image);
+    // (Only while pictures are on - with them off every pill shows initials, players included.)
+    const withPhotos = take.topics.filter(entry => !PICTURES_ON || entry.kind !== 'player' || entry.image);
     // A take with nothing highlighted looks broken, so if dropping photo-less players would leave
     // none, keep the teams and events (which never need a photo) rather than nothing.
     take.topics = withPhotos.length ? withPhotos : take.topics.filter(entry => entry.kind !== 'player');

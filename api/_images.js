@@ -9,6 +9,12 @@
 //  - the image file really exists
 // Anything else falls back to initials in the app.
 
+// PICTURES ARE OFF (2026-09-25). These logos and headshots are ESPN's, and we have no licence to show
+// them, so for the App Store launch the app shows initials instead. Only switch this back on with a
+// source we're allowed to use (Wikimedia Commons with credit, or a paid sports-data licence) - never
+// by flipping ESPN back on after App Review has approved the app.
+export const PICTURES_ON = process.env.TOPIC_PICTURES === 'on';
+
 const SEARCH = 'https://site.web.api.espn.com/apis/common/v3/search';
 const RESIZE = 'https://a.espncdn.com/combiner/i?img=';
 const BROWSER = { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' };
@@ -95,6 +101,7 @@ export async function findTeams(query, sport = '') {
 
 // Adds `image` to every topic it can vouch for. Never throws: pictures are a nicety, takes are the product.
 export async function attachImages(topics, sport, cache) {
+  if (!PICTURES_ON) return topics;
   await Promise.all(topics.map(async topic => {
     const key = `img:v2:${sport}:${topic.kind}:${plain(topic.label)}:${plain(topic.team)}`;
     try {
