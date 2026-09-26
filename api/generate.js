@@ -206,6 +206,37 @@ async function tighten(client, line) {
   return response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim().replace(/^"|"$/g, '');
 }
 
+// ==================== SEASON LINES ====================
+// Today's line (6 hours) and the last good one. The last good one is what switching sport shows
+// while a fresh one is written behind it, so it has to outlive a quiet spell: at 2 days it ran out
+// during the beta and EVERY sport went blank, which on a phone reads as the sport being broken.
+export const seasonKey = sport => `season:v12:${sport}:${new Date().toISOString().slice(0, 10)}`;
+export const SEASON_LAST = sport => `season:last2:${sport}`;
+const SEASON_LAST_TTL = 7 * 24 * 60 * 60;
+
+/** Writes one sport's season line and stores it. One writer per sport at a time. Never throws. */
+export async function writeSeason(sport, cache) {
+  const busyKey = `season:writing:${sport}`;
+  if (await cache.get(busyKey)) return null;
+  await cache.set(busyKey, 1, { ttl: 180 });
+  const started = Date.now();
+  try {
+    const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
+    const fresh = await generateSeason(client, sport);
+    console.log('Season writer finished', { sport, ok: !!fresh, seconds: Math.round((Date.now() - started) / 1000), line: fresh });
+    if (fresh) {
+      await cache.set(seasonKey(sport), fresh, { ttl: SEASON_TTL, tags: ['season'] });
+      await cache.set(SEASON_LAST(sport), fresh, { ttl: SEASON_LAST_TTL, tags: ['season'] });
+    }
+    return fresh;
+  } catch (error) {
+    console.error('Season writer crashed', { sport, error: String(error?.message || error) });
+    return null;
+  } finally {
+    await cache.delete(busyKey).catch(() => {});
+  }
+}
+
 export async function generateSeason(client, sport) {
   const league = LEAGUES[sport];
   const today = new Date().toLocaleDateString('en-US', {
@@ -484,12 +515,11 @@ export default async function handler(req, res) {
   // generation serves the whole app for six hours. This is the thing people open the app to see when
   // nothing in particular has happened, so putting it behind the take counter would be backwards.
   if (req.body?.kind === 'season') {
-    const day = new Date().toISOString().slice(0, 10);
-    const key = `season:v12:${sport}:${day}`;
+    const key = seasonKey(sport);
     // Deliberately NOT versioned: the whole point of the last-good answer is to cover a failure, and
     // the likeliest moment to fail is right after the wording changes, which is exactly when a
     // versioned fallback store would be empty. Golf came back blank that way.
-    const lastKey = `season:last2:${sport}`;
+    const lastKey = SEASON_LAST(sport);
     const held = await cache.get(key);
     if (held) return res.status(200).json({ line: held, cached: true });
 
@@ -502,25 +532,8 @@ export default async function handler(req, res) {
     // last good line if there is one, otherwise a plain "not yet" the phone turns into a take - and
     // the writing always happens BEHIND the response, for the next person. A season does not turn
     // over in six hours; yesterday's line is a fine thing to read while today's is being checked.
-    const busyKey = `season:writing:${sport}`;
-    if (!(await cache.get(busyKey))) {
-      // One writer per sport at a time, or a burst of switches is a burst of generations
-      await cache.set(busyKey, 1, { ttl: 180 });
-      waitUntil((async () => {
-        try {
-          const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
-          const started = Date.now();
-          const fresh = await generateSeason(client, sport);
-          console.log('Season writer finished', { sport, ok: !!fresh, seconds: Math.round((Date.now() - started) / 1000), line: fresh });
-          if (fresh) {
-            await cache.set(key, fresh, { ttl: SEASON_TTL, tags: ['season'] });
-            await cache.set(lastKey, fresh, { ttl: 2 * 24 * 60 * 60, tags: ['season'] });
-          }
-        } catch (error) { console.error('Season writer crashed', { sport, error: String(error?.message || error) }); } finally {
-          await cache.delete(busyKey).catch(() => {});
-        }
-      })());
-    }
+    // (writeSeason, below, is the same job the 6am warm-up runs for every sport)
+    if (!(await cache.get(`season:writing:${sport}`))) waitUntil(writeSeason(sport, cache));
     const lastGood = await cache.get(lastKey);
     if (lastGood) return res.status(200).json({ line: lastGood, cached: true, stale: true });
     return res.status(503).json({ error: 'No season line yet', writing: true });

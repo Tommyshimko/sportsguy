@@ -1,5 +1,14 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/app/index.html" }
+    {
+      "source": "/",
+      "destination": "/app/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/warm-season",
+      "schedule": "0 10 * * *"
+    }
   ]
 }
