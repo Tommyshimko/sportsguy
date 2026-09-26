@@ -9,11 +9,15 @@
 //  - the image file really exists
 // Anything else falls back to initials in the app.
 
-// PICTURES ARE OFF (2026-09-25). These logos and headshots are ESPN's, and we have no licence to show
-// them, so for the App Store launch the app shows initials instead. Only switch this back on with a
-// source we're allowed to use (Wikimedia Commons with credit, or a paid sports-data licence) - never
-// by flipping ESPN back on after App Review has approved the app.
-export const PICTURES_ON = process.env.TOPIC_PICTURES === 'on';
+// PLAYER PHOTOS COME FROM WIKIMEDIA COMMONS, NEVER FROM ESPN (2026-09-26).
+// ESPN's logos and headshots were never ours to show. Commons photos are free to use under their
+// licence as long as the photographer is credited, so every photo travels with its credit and the
+// app lists them under Settings > Photo credits. Only free licences get through (public domain,
+// CC0, CC BY, CC BY-SA), and a photo goes only to an app that says it can show credits - an app
+// without that screen keeps initials, which is also what was declared to App Review for 1.4.0.
+// Team logos stay OFF: they are trademarks, and Commons does not change that.
+// TOPIC_PICTURES=off is the kill switch.
+export const PICTURES_ON = process.env.TOPIC_PICTURES !== 'off';
 
 const SEARCH = 'https://site.web.api.espn.com/apis/common/v3/search';
 const RESIZE = 'https://a.espncdn.com/combiner/i?img=';
@@ -99,26 +103,96 @@ export async function findTeams(query, sport = '') {
     });
 }
 
-// Adds `image` to every topic it can vouch for. Never throws: pictures are a nicety, takes are the product.
-export async function attachImages(topics, sport, cache) {
-  if (!PICTURES_ON) return topics;
+// ==================== WIKIMEDIA ====================
+// Wikimedia asks every client to say who it is (their User-Agent policy), and to go gently: each
+// answer is cached for a week, so a player is looked up once, not once per take.
+const WIKI = { 'User-Agent': 'SportsGuy/1.0 (https://sportsguy.xyz; hello@sportsguy.xyz)' };
+// What makes someone the right person: a human (Q5) who plays this sport (P641) or has it as a job (P106)
+const WIKI_SPORT = {
+  football: { sport: 'Q41323', job: 'Q19204627' },
+  baseball: { sport: 'Q5369', job: 'Q10871364' },
+  basketball: { sport: 'Q5372', job: 'Q3665646' },
+  soccer: { sport: 'Q2736', job: 'Q937857' },
+  tennis: { sport: 'Q847', job: 'Q10833314' },
+  golf: { sport: 'Q5377', job: 'Q13156709' },
+};
+// Free licences only. Anything else - "fair use", "all rights reserved", a logo - is not ours to show.
+const FREE_LICENCE = /^(cc0|public domain|pd\b|pd-|cc by(-sa)? \d(\.\d)?)/i;
+
+const wikiJson = async url => {
+  const response = await fetch(url, { headers: WIKI, signal: AbortSignal.timeout(6000) });
+  if (!response.ok) throw new Error(`Wikimedia ${response.status}`);
+  return response.json();
+};
+const wikidata = params => wikiJson(`https://www.wikidata.org/w/api.php?${new URLSearchParams({ ...params, format: 'json' })}`);
+const claimIds = (claims, prop) => (claims?.[prop] || []).map(s => s.mainsnak?.datavalue?.value?.id).filter(Boolean);
+// Newer entries keep the name in "mul" (every language) rather than "en" - Carlos Alcaraz does
+const namesOf = entity => [
+  entity.labels?.en?.value, entity.labels?.mul?.value,
+  ...(entity.aliases?.en || []).map(a => a.value), ...(entity.aliases?.mul || []).map(a => a.value),
+].filter(Boolean).map(plain);
+
+// The same accuracy rule as before: a missing photo is fine, a wrong one is not. Exact name, this
+// sport, and exactly one such person - with the writer's team breaking a tie (two Josh Allens).
+async function wikiPhoto(topic, sport) {
+  const want = WIKI_SPORT[sport];
+  if (!want || topic.kind !== 'player') return null;
+  const found = await wikidata({ action: 'wbsearchentities', search: topic.label, language: 'en', uselang: 'en', type: 'item', limit: '12' });
+  const ids = (found.search || []).map(item => item.id);
+  if (!ids.length) return null;
+  const { entities } = await wikidata({ action: 'wbgetentities', ids: ids.join('|'), props: 'labels|aliases|claims', languages: 'en|mul' });
+  let matches = Object.values(entities || {}).filter(entity =>
+    claimIds(entity.claims, 'P31').includes('Q5') &&
+    namesOf(entity).includes(plain(topic.label)) &&
+    (claimIds(entity.claims, 'P641').includes(want.sport) || claimIds(entity.claims, 'P106').includes(want.job)));
+  if (matches.length > 1 && topic.team) {
+    const teamIds = [...new Set(matches.flatMap(entity => claimIds(entity.claims, 'P54')))];
+    const teams = teamIds.length ? (await wikidata({ action: 'wbgetentities', ids: teamIds.slice(0, 50).join('|'), props: 'labels', languages: 'en|mul' })).entities || {} : {};
+    matches = matches.filter(entity => claimIds(entity.claims, 'P54').some(id => {
+      const label = teams[id]?.labels?.en?.value || teams[id]?.labels?.mul?.value;
+      return label && sameTeam(label, topic.team);
+    }));
+  }
+  if (matches.length !== 1) return null;
+
+  const file = matches[0].claims?.P18?.[0]?.mainsnak?.datavalue?.value;
+  if (!file) return null;
+  const info = await wikiJson(`https://commons.wikimedia.org/w/api.php?${new URLSearchParams({
+    action: 'query', titles: `File:${file}`, prop: 'imageinfo', iiprop: 'url|extmetadata', iiurlwidth: '240', format: 'json',
+  })}`);
+  const image = Object.values(info.query?.pages || {})[0]?.imageinfo?.[0];
+  const meta = image?.extmetadata || {};
+  const licence = String(meta.LicenseShortName?.value || '').trim();
+  if (!image?.thumburl || !FREE_LICENCE.test(licence) || meta.NonFree?.value) return null;
+  const author = String(meta.Artist?.value || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Unknown photographer';
+  return { url: image.thumburl, credit: { author, licence, source: image.descriptionurl } };
+}
+
+// Adds `image` + `credit` to every PLAYER it can vouch for, and only for an app that can show the
+// credits. Never throws: pictures are a nicety, takes are the product.
+export async function attachImages(topics, sport, cache, canCredit) {
+  if (!PICTURES_ON || !canCredit) return topics;
   await Promise.all(topics.map(async topic => {
-    const key = `img:v2:${sport}:${topic.kind}:${plain(topic.label)}:${plain(topic.team)}`;
+    if (topic.kind !== 'player') return;
+    const key = `img:wiki1:${sport}:${plain(topic.label)}:${plain(topic.team)}`;
     try {
-      const saved = await cache?.get(key);
-      if (saved !== undefined && saved !== null) {
-        if (saved.url) topic.image = saved.url;
-        return;
+      let saved = await cache?.get(key);
+      if (saved === undefined || saved === null) {
+        saved = (await wikiPhoto(topic, sport)) || { url: '' };
+        // A found photo is good for a week. A miss is looked at again in a day (Commons grows).
+        await cache?.set(key, saved, { ttl: saved.url ? 7 * 24 * 3600 : 24 * 3600, name: 'topic-image' });
       }
-      const url = await lookUp(topic, sport);
-      if (url) topic.image = url;
-      // A found picture is good for a week (trades change teams). A miss is retried within the hour:
-      // a slow ESPN reply looks exactly like 'no picture', and a whole day of missing logos is worse
-      // than looking again.
-      await cache?.set(key, { url: url || '' }, { ttl: url ? 7 * 24 * 3600 : 3600, name: 'topic-image' });
+      if (saved.url) { topic.image = saved.url; topic.credit = saved.credit; }
     } catch (error) {
-      console.warn('Image lookup failed', { label: topic.label, error: String(error.message || error) });
+      console.warn('Photo lookup failed', { label: topic.label, error: String(error.message || error) });
     }
   }));
   return topics;
+}
+
+/** The topics as this app may see them. Stored takes are always stripped first (older ones still hold
+ *  ESPN links), then an app that lists credits gets the Commons photos put back from the cache. */
+export async function forClient(topics, sport, cache, canCredit) {
+  const bare = (topics || []).map(({ image, credit, ...topic }) => topic);
+  return canCredit ? attachImages(bare, sport, cache, true) : bare;
 }

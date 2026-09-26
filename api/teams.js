@@ -1,10 +1,10 @@
 // Search for a team to follow. The app asks this instead of ESPN directly, so the shape of a team is
 // decided in one place and every answer is checked the same way logos are.
 import { getCache } from '@vercel/functions';
-import { findTeams, PICTURES_ON } from './_images.js';
+import { findTeams } from './_images.js';
 
-// Pictures off: send no logos, even from team searches cached before the switch
-const bare = teams => PICTURES_ON ? teams : teams.map(team => ({ ...team, image: null }));
+// Team logos are trademarks and stay off, even in team searches cached before the switch
+const bare = teams => teams.map(team => ({ ...team, image: null }));
 
 export const config = { maxDuration: 15 };
 

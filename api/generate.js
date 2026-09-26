@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache, waitUntil } from '@vercel/functions';
-import { attachImages, PICTURES_ON } from './_images.js';
+import { forClient } from './_images.js';
 import { accountsReady, followedTeams } from './_account.js';
 import { chargeTake, clientIp, PAID_HOURLY_LIMIT, peekWallet, refundTake, resolveWallet, walletReady } from './_wallet.js';
 
@@ -490,6 +490,8 @@ export default async function handler(req, res) {
   const location = cleanLocation(req.body?.location || '');
   const n = Math.max(0, Math.min(1000, parseInt(req.body?.n, 10) || 0));
   const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
+  // Set by apps that list photo credits (Settings > Photo credits). Others never get a photo.
+  const canCredit = req.body?.credits === 1;
   // Whose wallet pays: the signed-in account, else the RevenueCat id the app sent, else the IP
   const ip = clientIp(req);
   const { walletId, userId } = await resolveWallet(req.body, ip);
@@ -549,8 +551,8 @@ export default async function handler(req, res) {
   const send = async (take, cached, more, wallet) => {
     if (wallet === undefined && walletReady()) wallet = await peekWallet(walletId).catch(() => undefined);
     return res.status(200).json({
-      // Pool takes written before pictures were switched off still carry ESPN links, so strip on the way out
-      quote: take.quote, topics: (take.topics || []).map(t => PICTURES_ON ? t : { ...t, image: undefined }), cached, more,
+      // Photos only for an app that shows their credits (and never the old ESPN links a stored take may hold)
+      quote: take.quote, topics: await forClient(take.topics, sport, cache, canCredit), cached, more,
       ...(wallet ? { wallet, takesLeft: wallet.freeLeft + wallet.paid } : {}),
     });
   };
@@ -629,14 +631,7 @@ export default async function handler(req, res) {
       await refund();
       return res.status(502).json({ error: 'No take came back' });
     }
-    await attachImages(take.topics, sport, cache);
-    // Tommy's rule: every highlighted PLAYER shows his headshot. If we can't vouch for a photo, the
-    // player simply isn't offered as a topic (his name stays in the take, just not highlighted).
-    // (Only while pictures are on - with them off every pill shows initials, players included.)
-    const withPhotos = take.topics.filter(entry => !PICTURES_ON || entry.kind !== 'player' || entry.image);
-    // A take with nothing highlighted looks broken, so if dropping photo-less players would leave
-    // none, keep the teams and events (which never need a photo) rather than nothing.
-    take.topics = withPhotos.length ? withPhotos : take.topics.filter(entry => entry.kind !== 'player');
+    // A player without a free photo keeps initials (Tommy, 2026-09-26: initials are the fallback)
     console.log('New take', { sport, location, topic, quote: take.quote, topics: take.topics, evidence: take.evidence });
 
     // Re-read so two people generating at once don't overwrite each other
