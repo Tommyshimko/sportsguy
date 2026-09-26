@@ -283,13 +283,13 @@ LAST ATTEMPT, SO PLAY IT SAFE. Earlier goes were thrown out for saying things th
     const text = reply.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
     let line = (text.match(/<take>([\s\S]*?)<\/take>/)?.[1] || '').trim().replace(/^"|"$/g, '');
     const evidence = (text.match(/<evidence>([\s\S]*?)<\/evidence>/)?.[1] || '').trim();
-    if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 110) continue;
+    if (!line || line === 'NO_TAKE' || line.split(/\s+/).length > 110) { console.warn('Season attempt empty', { sport, attempt, stop: reply.stop_reason, line: line.slice(0, 80) }); continue; }
 
     // CHECK THE FULL ANSWER, THEN CUT IT. The other way round loses the team sports: they write long,
     // so they always get trimmed, and trimming drops the clause a fact was resting on - the checker
     // then fails a line it would have passed. Cutting cannot add anything, so checking first is safe.
     const checked = await verifyTake(client, line, evidence, calendar);
-    if (!checked.pass) continue;
+    if (!checked.pass) { console.warn('Season attempt failed the check', { sport, attempt, line, verdict: checked.verdict || checked.reason }); continue; }
 
     // It writes 60 to 100 words however firmly the prompt asks for 40, so the cutting is done here
     // rather than asked for.
@@ -509,12 +509,14 @@ export default async function handler(req, res) {
       waitUntil((async () => {
         try {
           const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY, maxRetries: 1, timeout: 50_000 });
+          const started = Date.now();
           const fresh = await generateSeason(client, sport);
+          console.log('Season writer finished', { sport, ok: !!fresh, seconds: Math.round((Date.now() - started) / 1000), line: fresh });
           if (fresh) {
             await cache.set(key, fresh, { ttl: SEASON_TTL, tags: ['season'] });
             await cache.set(lastKey, fresh, { ttl: 2 * 24 * 60 * 60, tags: ['season'] });
           }
-        } catch {} finally {
+        } catch (error) { console.error('Season writer crashed', { sport, error: String(error?.message || error) }); } finally {
           await cache.delete(busyKey).catch(() => {});
         }
       })());
