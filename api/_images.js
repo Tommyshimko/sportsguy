@@ -9,15 +9,20 @@
 //  - the image file really exists
 // Anything else falls back to initials in the app.
 
-// PLAYER PHOTOS COME FROM WIKIMEDIA COMMONS, NEVER FROM ESPN (2026-09-26).
-// ESPN's logos and headshots were never ours to show. Commons photos are free to use under their
-// licence as long as the photographer is credited, so every photo travels with its credit and the
-// app lists them under Settings > Photo credits. Only free licences get through (public domain,
-// CC0, CC BY, CC BY-SA), and a photo goes only to an app that says it can show credits - an app
-// without that screen keeps initials, which is also what was declared to App Review for 1.4.0.
-// Team logos stay OFF: they are trademarks, and Commons does not change that.
-// TOPIC_PICTURES=off is the kill switch.
+// WHO GETS WHICH PICTURES (decided per request, by what is asking):
+//   - THE iPHONE AND ANDROID APPS: Wikimedia Commons player photos only, and only from a build that
+//     lists their credits (`credits: 1`). Team logos never. This is what was declared to App Review
+//     ("no third-party content" for 1.4.0), so an app must NEVER be sent an ESPN picture.
+//   - THE WEB (sportsguy.xyz, `pictures: 'web'`): Tommy's call on 2026-09-27 - real team logos and
+//     the best headshot there is, which is ESPN's, with the Commons photo as the fallback. He knows
+//     these are not licensed and accepts that for the website, which no store reviews.
+// TOPIC_PICTURES=off switches every picture off everywhere. WEB_PICTURES=off switches only the
+// website's ESPN ones off (it falls back to what the apps get) - the one-step answer to a takedown.
 export const PICTURES_ON = process.env.TOPIC_PICTURES !== 'off';
+export const WEB_PICTURES_ON = PICTURES_ON && process.env.WEB_PICTURES !== 'off';
+/** What this request may be sent: 'web' (logos + ESPN headshots), 'credited' (Commons photos), or none. */
+export const picturesFor = body =>
+  body?.pictures === 'web' && WEB_PICTURES_ON ? 'web' : body?.credits === 1 || body?.pictures === 'web' ? 'credited' : 'none';
 
 const SEARCH = 'https://site.web.api.espn.com/apis/common/v3/search';
 const RESIZE = 'https://a.espncdn.com/combiner/i?img=';
@@ -168,14 +173,26 @@ async function wikiPhoto(topic, sport) {
   return { url: image.thumburl, credit: { author, licence, source: image.descriptionurl } };
 }
 
-// Adds `image` + `credit` to every PLAYER it can vouch for, and only for an app that can show the
-// credits. Never throws: pictures are a nicety, takes are the product.
-export async function attachImages(topics, sport, cache, canCredit) {
-  if (!PICTURES_ON || !canCredit) return topics;
+// Adds a picture to every topic it can vouch for, by what the asker may have (see the top of the file).
+// Never throws: pictures are a nicety, takes are the product.
+export async function attachImages(topics, sport, cache, mode) {
+  if (!PICTURES_ON || mode === 'none' || !mode) return topics;
   await Promise.all(topics.map(async topic => {
-    if (topic.kind !== 'player') return;
-    const key = `img:wiki1:${sport}:${plain(topic.label)}:${plain(topic.team)}`;
     try {
+      // The website first tries ESPN: a logo for a team, its headshot for a player
+      if (mode === 'web' && topic.kind !== 'event') {
+        const key = `img:v2:${sport}:${topic.kind}:${plain(topic.label)}:${plain(topic.team)}`;
+        let saved = await cache?.get(key);
+        if (saved === undefined || saved === null) {
+          saved = { url: (await lookUp(topic, sport)) || '' };
+          // A miss is retried within the hour: a slow ESPN reply looks exactly like 'no picture'
+          await cache?.set(key, saved, { ttl: saved.url ? 7 * 24 * 3600 : 3600, name: 'topic-image' });
+        }
+        if (saved.url) { topic.image = saved.url; return; }
+      }
+      // Everyone allowed a picture gets the Commons photo of a player, credited
+      if (topic.kind !== 'player') return;
+      const key = `img:wiki1:${sport}:${plain(topic.label)}:${plain(topic.team)}`;
       let saved = await cache?.get(key);
       if (saved === undefined || saved === null) {
         saved = (await wikiPhoto(topic, sport)) || { url: '' };
@@ -184,15 +201,15 @@ export async function attachImages(topics, sport, cache, canCredit) {
       }
       if (saved.url) { topic.image = saved.url; topic.credit = saved.credit; }
     } catch (error) {
-      console.warn('Photo lookup failed', { label: topic.label, error: String(error.message || error) });
+      console.warn('Picture lookup failed', { label: topic.label, error: String(error.message || error) });
     }
   }));
   return topics;
 }
 
-/** The topics as this app may see them. Stored takes are always stripped first (older ones still hold
- *  ESPN links), then an app that lists credits gets the Commons photos put back from the cache. */
-export async function forClient(topics, sport, cache, canCredit) {
+/** The topics as this asker may see them. Stored takes are always stripped first (older ones still
+ *  hold pictures from before), then whatever the asker is allowed is put back from the cache. */
+export async function forClient(topics, sport, cache, mode) {
   const bare = (topics || []).map(({ image, credit, ...topic }) => topic);
-  return canCredit ? attachImages(bare, sport, cache, true) : bare;
+  return mode && mode !== 'none' ? attachImages(bare, sport, cache, mode) : bare;
 }

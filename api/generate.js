@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCache, waitUntil } from '@vercel/functions';
-import { forClient } from './_images.js';
+import { forClient, picturesFor } from './_images.js';
 import { accountsReady, followedTeams } from './_account.js';
 import { chargeTake, clientIp, PAID_HOURLY_LIMIT, peekWallet, refundTake, resolveWallet, walletReady } from './_wallet.js';
 
@@ -490,8 +490,9 @@ export default async function handler(req, res) {
   const location = cleanLocation(req.body?.location || '');
   const n = Math.max(0, Math.min(1000, parseInt(req.body?.n, 10) || 0));
   const topic = cleanLocation(req.body?.topic || '').slice(0, 40);
-  // Set by apps that list photo credits (Settings > Photo credits). Others never get a photo.
-  const canCredit = req.body?.credits === 1;
+  // What this asker may be sent: the website gets logos and ESPN headshots, an app that lists photo
+  // credits gets Commons photos, anything else gets none (see the top of _images.js)
+  const pictures = picturesFor(req.body);
   // Whose wallet pays: the signed-in account, else the RevenueCat id the app sent, else the IP
   const ip = clientIp(req);
   const { walletId, userId } = await resolveWallet(req.body, ip);
@@ -551,8 +552,7 @@ export default async function handler(req, res) {
   const send = async (take, cached, more, wallet) => {
     if (wallet === undefined && walletReady()) wallet = await peekWallet(walletId).catch(() => undefined);
     return res.status(200).json({
-      // Photos only for an app that shows their credits (and never the old ESPN links a stored take may hold)
-      quote: take.quote, topics: await forClient(take.topics, sport, cache, canCredit), cached, more,
+      quote: take.quote, topics: await forClient(take.topics, sport, cache, pictures), cached, more,
       ...(wallet ? { wallet, takesLeft: wallet.freeLeft + wallet.paid } : {}),
     });
   };
