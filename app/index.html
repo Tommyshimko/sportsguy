@@ -87,10 +87,15 @@
         user-select: text;
         outline: none;
       }
-      /* These styles make the root element full-height */
+      /* These styles make the root element full-height. ON A PHONE THE HEIGHT IS THE LARGE VIEWPORT
+         (100lvh: the window with Safari's bars collapsed) and never moves: with 100% the root grew
+         and shrank every time Safari's bars came and went, the feed's pages had been laid out for
+         the other size, and the next take showed through under the pills. The bars simply cover
+         the bottom of the page while they are out, which is the peek of the next take. */
       #root {
         display: flex;
         height: 100%;
+        height: 100lvh;
         flex: 1;
       }
     </style>
@@ -142,6 +147,6 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/app/_expo/static/js/web/index-332ae6fa254399b8924fa0775e28f9c7.js" defer></script>
+  <script src="/app/_expo/static/js/web/index-dc2db366f8675cd95d0b042df77aae54.js" defer></script>
 </body>
 </html>
