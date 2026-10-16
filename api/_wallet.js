@@ -15,7 +15,7 @@
 import { whoIs } from './_account.js';
 
 // ==================== SETTINGS ====================
-export const FREE_PER_DAY = Number(process.env.FREE_TAKES_PER_DAY) || 2;
+export const FREE_PER_DAY = Number(process.env.FREE_TAKES_PER_DAY) || 3;
 export const PRO_PER_MONTH = Number(process.env.PRO_TAKES_PER_MONTH) || 80;      // Pro takes per UTC month
 export const FREE_DAILY_BUDGET = Number(process.env.FREE_DAILY_BUDGET) || 150;   // new free takes/day, everyone
 export const PAID_HOURLY_LIMIT = Number(process.env.PAID_HOURLY_LIMIT) || 40;    // abuse brake, per wallet
